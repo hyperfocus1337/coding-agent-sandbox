@@ -93,9 +93,9 @@ RUN cargo install cargo-binstall && \
 ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
 ENV PATH="/usr/local/share/npm-global/bin:/home/$USERNAME/.local/bin:$PATH"
 
-# Install Claude Code CLI via npm so it lands in the npm-global prefix (system path).
-# https://www.npmjs.com/package/@anthropic-ai/claude-code
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude Code CLI official installation script
+# https://code.claude.com/docs/en/setup
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Install Gemini CLI
 # https://geminicli.com/docs/get-started/installation/
@@ -125,9 +125,6 @@ RUN bash /home/$USERNAME/scripts/agents/claude.sh
 
 # Install Gemini extensions
 # RUN bash /home/$USERNAME/scripts/agents/gemini.sh
-
-# Install Tessl CLI
-RUN curl -fsSL https://get.tessl.io | sh
 
 # Use fish as the container entrypoint (start as login shell with -l)
 ENTRYPOINT ["/usr/bin/fish", "-l"]
