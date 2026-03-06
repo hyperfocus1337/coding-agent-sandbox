@@ -41,7 +41,7 @@
   "remoteUser": "node",
   "mounts": [
     "source=coding-agent-sandbox-claude-state,target=/home/node/.claude,type=volume",
-    "source=coding-agent-sandbox-cursor-state,target=/home/node/.cursor,type=volume",
+    "source=coding-agent-sandbox-cursor-state,target=/home/node/.cursor-server,type=volume",
     "source=${localWorkspaceFolder}/.devcontainer/mounts/bash_history,target=/home/node/.bash_history,type=bind",
     "source=${localWorkspaceFolder}/.devcontainer/mounts/fish_history,target=/home/node/.local/share/fish/fish_history,type=bind",
     "source=${localWorkspaceFolder}/.devcontainer/mounts/claude.json,target=/home/node/.claude.json,type=bind",
@@ -56,6 +56,7 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/${localWorkspaceFolderBasename},type=bind,consistency=delegated",
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
+  "initializeCommand": ["docker", "run", "--rm", "--user", "root", "--entrypoint", "/bin/sh", "-v", "coding-agent-sandbox-cursor-state:/vol", "coding-agent-sandbox-devcontainer:6.0-trixie", "-c", "chown -R node:node /vol"],
   "postStartCommand": {
     "tessl": "bash /home/node/scripts/agents/tessl.sh",
     "activate": "fish /home/node/scripts/system/activate.fish"
