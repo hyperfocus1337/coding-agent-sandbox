@@ -8,6 +8,8 @@ ENV TZ="$TZ"
 
 # Username for the non-root user
 ARG USERNAME=node
+ARG USER_UID=1000
+ARG USER_GID=1000
 
 # Install basic development tools
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -90,8 +92,8 @@ USER $USERNAME
 # Rust toolchain (for Justfile LSP)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/home/$USERNAME/.cargo/bin:$PATH"
-RUN --mount=type=cache,target=/home/node/.cargo/registry \
-    --mount=type=cache,target=/home/node/.cargo/git \
+RUN --mount=type=cache,target=/home/$USERNAME/.cargo/registry,uid=$USER_UID,gid=$USER_GID \
+    --mount=type=cache,target=/home/$USERNAME/.cargo/git,uid=$USER_UID,gid=$USER_GID \
     cargo install cargo-binstall && \
     cargo binstall just-lsp --no-confirm
 
