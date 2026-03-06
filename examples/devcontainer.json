@@ -45,6 +45,7 @@
     "source=${localWorkspaceFolder}/.devcontainer/mounts/bash_history,target=/home/node/.bash_history,type=bind",
     "source=${localWorkspaceFolder}/.devcontainer/mounts/fish_history,target=/home/node/.local/share/fish/fish_history,type=bind",
     "source=${localWorkspaceFolder}/.devcontainer/mounts/claude.json,target=/home/node/.claude.json,type=bind",
+    "source=${localEnv:HOME}/.claude/commands,target=/home/node/.claude/commands,type=bind",
     "source=${localEnv:HOME}/.ssh/config,target=/home/node/.ssh/config,type=bind,readonly",
     "source=${localEnv:HOME}/.ssh/hyperfocus-key,target=/home/node/.ssh/hyperfocus-key,type=bind,readonly"
   ],
@@ -56,7 +57,10 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/${localWorkspaceFolderBasename},type=bind,consistency=delegated",
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
-  "initializeCommand": ["docker", "run", "--rm", "--user", "root", "--entrypoint", "/bin/sh", "-v", "coding-agent-sandbox-cursor-state:/vol", "coding-agent-sandbox-devcontainer:6.0-trixie", "-c", "chown -R node:node /vol"],
+  "initializeCommand": {
+    "claude-commands-dir": "mkdir -p ~/.claude/commands",
+    "cursor-volume-perms": ["docker", "run", "--rm", "--user", "root", "--entrypoint", "/bin/sh", "-v", "coding-agent-sandbox-cursor-state:/vol", "coding-agent-sandbox-devcontainer:6.0-trixie", "-c", "chown -R node:node /vol"]
+  },
   "postStartCommand": {
     "tessl": "bash /home/node/scripts/agents/tessl.sh",
     "activate": "fish /home/node/scripts/system/activate.fish"
