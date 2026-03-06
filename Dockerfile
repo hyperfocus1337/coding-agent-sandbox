@@ -112,7 +112,7 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Install Gemini CLI
 # https://geminicli.com/docs/get-started/installation/
-RUN --mount=type=cache,target=/home/node/.npm \
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g @google/gemini-cli
 
 # Set the default editor and visual
