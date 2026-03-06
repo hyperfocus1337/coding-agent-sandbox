@@ -11,8 +11,5 @@ direnv hook fish | source
 # Source rust
 source "$HOME/.cargo/env.fish"
 
-# Activate the virtual environment
-source /home/node/scripts/system/activate.fish
-
 # Add at the end of the file
 starship init fish | source
