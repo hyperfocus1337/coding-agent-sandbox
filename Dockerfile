@@ -11,9 +11,12 @@ ARG USERNAME=node
 ARG USER_UID=1000
 ARG USER_GID=1000
 
+# Automatically set by BuildKit for multi-platform builds; used to scope apt caches per arch
+ARG TARGETARCH
+
 # Install basic development tools
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     less \
     git \
@@ -60,8 +63,8 @@ RUN ARCH=$(dpkg --print-architecture) && \
 
 # Github CLI
 # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     (type -p wget >/dev/null || (apt update && apt install wget -y)) \
     && mkdir -p -m 755 /etc/apt/keyrings \
     && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -76,10 +79,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # Install Claude Code sandbox runtime
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/root/.npm \
-    apt-get install -y bubblewrap socat seccomp && \
+    apt-get update && apt-get install -y bubblewrap socat seccomp && \
     npm install -g @anthropic-ai/sandbox-runtime
 
 # Image version stamp for home-dir initialization tracking (written before USER switch)
