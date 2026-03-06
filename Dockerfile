@@ -10,7 +10,9 @@ ENV TZ="$TZ"
 ARG USERNAME=node
 
 # Install basic development tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     less \
     git \
     procps \
@@ -27,8 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     direnv \
     python3 \
     python3-pip \
-    python3-venv \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    python3-venv
 
 # Install Starship prompt
 RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes && \
@@ -57,7 +58,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
 
 # Github CLI
 # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
-RUN (type -p wget >/dev/null || (apt update && apt install wget -y)) \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    (type -p wget >/dev/null || (apt update && apt install wget -y)) \
     && mkdir -p -m 755 /etc/apt/keyrings \
     && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && cat $out | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
@@ -71,7 +74,10 @@ RUN (type -p wget >/dev/null || (apt update && apt install wget -y)) \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # Install Claude Code sandbox runtime
-RUN apt-get install -y bubblewrap socat seccomp && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=cache,target=/root/.npm \
+    apt-get install -y bubblewrap socat seccomp && \
     npm install -g @anthropic-ai/sandbox-runtime
 
 # Image version stamp for home-dir initialization tracking (written before USER switch)
@@ -84,7 +90,9 @@ USER $USERNAME
 # Rust toolchain (for Justfile LSP)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/home/$USERNAME/.cargo/bin:$PATH"
-RUN cargo install cargo-binstall && \
+RUN --mount=type=cache,target=/home/node/.cargo/registry \
+    --mount=type=cache,target=/home/node/.cargo/git \
+    cargo install cargo-binstall && \
     cargo binstall just-lsp --no-confirm
 
 # Install global npm CLIs as root.
@@ -99,7 +107,8 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Install Gemini CLI
 # https://geminicli.com/docs/get-started/installation/
-RUN npm install -g @google/gemini-cli
+RUN --mount=type=cache,target=/home/node/.npm \
+    npm install -g @google/gemini-cli
 
 # Set the default editor and visual
 ENV EDITOR="vim"
