@@ -1,15 +1,20 @@
 name: Build devcontainer image
 
 on:
-  # Commented out to avoid triggering builds on every commit
-  # push:
-    # branches: [main]
-    # tags: ["v*"]
-    # paths:
-    #   - .devcontainer/**
-  # pull_request:
-    # paths:
-    #   - .devcontainer/**
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - Dockerfile
+      - config
+      - scripts
+      - .github/workflows/docker-devcontainer.yml
+  pull_request:
+    paths:
+      - Dockerfile
+      - config
+      - scripts
+      - .github/workflows/docker-devcontainer.yml
   workflow_dispatch:
 
 jobs:
@@ -49,8 +54,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .devcontainer
-          file: .devcontainer/Dockerfile
+          context: .
+          file: Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
