@@ -42,7 +42,6 @@
   "mounts": [
     "source=coding-agent-sandbox-claude-config,target=/home/node/.claude,type=volume",
     "source=coding-agent-sandbox-cursor-state,target=/home/node/.cursor-server,type=volume",
-    "source=${localWorkspaceFolder}/.devcontainer/mounts/.claude.json,target=/home/node/.claude.json,type=bind",
     "source=${localWorkspaceFolder}/.devcontainer/mounts/bash_history,target=/home/node/.bash_history,type=bind",
     "source=${localWorkspaceFolder}/.devcontainer/mounts/fish_history,target=/home/node/.local/share/fish/fish_history,type=bind",
     "source=${localEnv:HOME}/.claude/commands,target=/home/node/.claude/commands,type=bind,readonly",
