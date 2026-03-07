@@ -8,8 +8,5 @@ fish_add_path "/home/node/.local/bin"
 # direnv hook for automatic .envrc loading
 direnv hook fish | source
 
-# Source rust
-source "$HOME/.cargo/env.fish"
-
 # Add at the end of the file
 starship init fish | source

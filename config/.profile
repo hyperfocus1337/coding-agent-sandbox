@@ -16,8 +16,5 @@ export PATH="/home/node/.local/bin:$PATH"
 # direnv hook for automatic .envrc loading
 eval "$(direnv hook bash)"
 
-# Source cargo environment
-. "$HOME/.cargo/env"
-
 # Add at the end of the file
 eval "$(starship init bash)"

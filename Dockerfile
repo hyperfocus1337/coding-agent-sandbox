@@ -97,13 +97,17 @@ RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 # Drop to non-root user for runtime
 USER $USERNAME
 
-# Rust toolchain (for Justfile LSP)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/home/$USERNAME/.cargo/bin:$PATH"
-RUN --mount=type=cache,target=/home/$USERNAME/.cargo/registry,uid=$USER_UID,gid=$USER_GID \
-    --mount=type=cache,target=/home/$USERNAME/.cargo/git,uid=$USER_UID,gid=$USER_GID \
-    cargo install cargo-binstall && \
-    cargo binstall just-lsp --no-confirm
+# Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain)
+ARG JUST_LSP_VERSION=0.3.4
+RUN mkdir -p /home/$USERNAME/.local/bin && \
+    ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+    amd64) JUST_LSP_ARCH="x86_64-unknown-linux-gnu" ;; \
+    arm64) JUST_LSP_ARCH="aarch64-unknown-linux-gnu" ;; \
+    *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    wget -qO- "https://github.com/terror/just-lsp/releases/download/${JUST_LSP_VERSION}/just-lsp-${JUST_LSP_VERSION}-${JUST_LSP_ARCH}.tar.gz" \
+    | tar -xz -C /home/$USERNAME/.local/bin ./just-lsp
 
 # Install global npm CLIs as root.
 # NPM_CONFIG_PREFIX points to a system path so binaries land in /usr/local/share/npm-global/bin,
