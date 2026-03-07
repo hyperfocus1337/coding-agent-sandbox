@@ -140,7 +140,7 @@ RUN mkdir -p /home/$USERNAME/.ssh && \
 RUN curl -fsSL https://get.tessl.io | sh
 
 # Install Claude Code plugins and MCP servers
-RUN bash /home/$USERNAME/scripts/agents/claude.sh
+# RUN bash /home/$USERNAME/scripts/agents/claude.sh
 
 # Install Gemini extensions
 # RUN bash /home/$USERNAME/scripts/agents/gemini.sh
