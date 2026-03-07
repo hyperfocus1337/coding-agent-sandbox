@@ -57,7 +57,6 @@
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
   "initializeCommand": "mkdir -p ~/.claude/commands",
   "postStartCommand": {
-    "setup-shell-history": "mkdir -p /home/node/.local/share/fish && ln -sf /home/node/.shell-history/fish_history /home/node/.local/share/fish/fish_history",
     "tessl": "bash /home/node/scripts/agents/tessl.sh",
     "activate": "fish /home/node/scripts/system/activate.fish"
   }

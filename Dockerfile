@@ -97,6 +97,12 @@ RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 # Drop to non-root user for runtime
 USER $USERNAME
 
+# Symlink fish history into the shared shell-history volume mount point.
+# The target doesn't need to exist at build time — the symlink will resolve once
+# the volume is mounted at container start.
+RUN ln -sf /home/$USERNAME/.shell-history/fish_history \
+    /home/$USERNAME/.local/share/fish/fish_history
+
 # Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain)
 ARG JUST_LSP_VERSION=0.3.4
 RUN mkdir -p /home/$USERNAME/.local/bin && \
