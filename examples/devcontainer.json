@@ -42,8 +42,7 @@
   "mounts": [
     "source=coding-agent-sandbox-claude-config,target=/home/node/.claude,type=volume",
     "source=coding-agent-sandbox-cursor-state,target=/home/node/.cursor-server,type=volume",
-    "source=${localWorkspaceFolder}/.devcontainer/mounts/bash_history,target=/home/node/.bash_history,type=bind",
-    "source=${localWorkspaceFolder}/.devcontainer/mounts/fish_history,target=/home/node/.local/share/fish/fish_history,type=bind",
+    "source=coding-agent-sandbox-shell-history,target=/home/node/.shell-history,type=volume",
     "source=${localEnv:HOME}/.claude/commands,target=/home/node/.claude/commands,type=bind,readonly",
     "source=${localEnv:HOME}/.ssh/config,target=/home/node/.ssh/config,type=bind,readonly",
     "source=${localEnv:HOME}/.ssh/hyperfocus-key,target=/home/node/.ssh/hyperfocus-key,type=bind,readonly"
@@ -51,29 +50,14 @@
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    "HISTFILE": "/home/node/.bash_history",
+    "HISTFILE": "/home/node/.shell-history/.bash_history",
     "WORKSPACE_FOLDER": "/workspace/${localWorkspaceFolderBasename}"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/${localWorkspaceFolderBasename},type=bind,consistency=delegated",
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
-  "initializeCommand": {
-    "claude-commands-dir": "mkdir -p ~/.claude/commands",
-    "cursor-volume-perms": [
-      "docker",
-      "run",
-      "--rm",
-      "--user",
-      "root",
-      "--entrypoint",
-      "/bin/sh",
-      "-v",
-      "coding-agent-sandbox-cursor-state:/vol",
-      "coding-agent-sandbox-devcontainer:6.0-trixie",
-      "-c",
-      "chown -R node:node /vol"
-    ]
-  },
+  "initializeCommand": "mkdir -p ~/.claude/commands",
   "postStartCommand": {
+    "setup-shell-history": "mkdir -p /home/node/.local/share/fish && ln -sf /home/node/.shell-history/fish_history /home/node/.local/share/fish/fish_history",
     "tessl": "bash /home/node/scripts/agents/tessl.sh",
     "activate": "fish /home/node/scripts/system/activate.fish"
   }

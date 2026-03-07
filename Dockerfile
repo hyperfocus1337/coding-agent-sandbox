@@ -48,8 +48,13 @@ RUN mkdir -p /usr/local/share/npm-global && \
 ENV DEVCONTAINER=true
 
 # Create workspace and config directories and set permissions
-RUN mkdir -p /workspace /home/$USERNAME/.claude /home/$USERNAME/.local/share/fish && \
-    chown -R $USERNAME:$USERNAME /workspace /home/$USERNAME/.claude /home/$USERNAME/.local
+RUN mkdir -p /workspace \
+    /home/$USERNAME/.claude \
+    /home/$USERNAME/.local/share/fish \
+    /home/$USERNAME/.cursor-server \
+    /home/$USERNAME/.shell-history && \
+    chown -R $USERNAME:$USERNAME /workspace /home/$USERNAME/.claude /home/$USERNAME/.local \
+    /home/$USERNAME/.cursor-server /home/$USERNAME/.shell-history
 
 WORKDIR /workspace
 
