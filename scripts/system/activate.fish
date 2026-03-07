@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
 # Determine project and venv paths via devcontainer-injected env var
-set -l venv_dir $WORKSPACE_FOLDER/.venv
+set -l venv_dir $WORKSPACE_FOLDER/devcontainer/.venv
 
 # If direnv is available, authorize .envrc for this project without changing directories
 if type -q direnv
