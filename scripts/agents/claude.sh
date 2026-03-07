@@ -31,4 +31,3 @@ claude plugin install code-refactoring@claude-code-workflows
 # MCP servers
 claude mcp add --scope user tessl -- tessl mcp start
 claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
-claude mcp add-json github --scope user '{"type":"http","url":"https://api.githubcopilot.com/mcp","headers":{"Authorization":"Bearer YOUR_GITHUB_PAT"}}'
