@@ -28,6 +28,11 @@ claude plugin install context7-plugin@context7-marketplace
 claude plugin marketplace add wshobson/agents
 claude plugin install code-refactoring@claude-code-workflows
 
+# Ast-grep plugin
+# https://github.com/ast-grep/agent-skill
+claude plugin marketplace add ast-grep/agent-skill
+claude plugin install ast-grep
+
 # MCP servers
 claude mcp add --scope user tessl -- tessl mcp start
 claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
