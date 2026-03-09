@@ -65,6 +65,11 @@ RUN ARCH=$(dpkg --print-architecture) && \
     sudo dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
     rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
+# Install Emacs to use Magit on server
+RUN mkdir -p /home/$USERNAME/.emacs.d
+COPY --chown=$USERNAME:$USERNAME config/init.el /home/$USERNAME/.emacs.d/init.el
+RUN bash /home/$USERNAME/scripts/system/emacs.sh
+
 # Github CLI
 # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
@@ -145,11 +150,6 @@ RUN curl -fsSL https://get.tessl.io | sh
 # Install Claude Code plugins and MCP servers
 RUN bash /home/$USERNAME/scripts/agents/claude.sh
 RUN bash /home/$USERNAME/scripts/agents/clone.sh
-
-# Install Emacs to use Magit on server
-RUN mkdir -p /home/$USERNAME/.emacs.d
-COPY --chown=$USERNAME:$USERNAME config/init.el /home/$USERNAME/.emacs.d/init.el
-RUN bash /home/$USERNAME/scripts/system/emacs.sh
 
 # Install Gemini extensions
 # RUN bash /home/$USERNAME/scripts/agents/gemini.sh
