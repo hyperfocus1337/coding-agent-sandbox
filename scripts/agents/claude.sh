@@ -10,9 +10,13 @@ fi
 
 # Official plugins
 # Official marketplace should be already installed (added for debugging)
+# https://github.com/anthropics/claude-code/tree/main/plugins/
 claude plugin marketplace add anthropics/claude-plugins-official
+# https://github.com/anthropics/claude-code/tree/main/plugins/code-review
 claude plugin install code-review@claude-plugins-official
+# https://github.com/anthropics/claude-code/tree/main/plugins/commit-commands
 claude plugin install commit-commands@claude-plugins-official
+# https://github.com/anthropics/claude-code/tree/main/plugins/feature-dev
 claude plugin install feature-dev@claude-plugins-official
 
 # Install pyright for lsp server
@@ -24,21 +28,27 @@ npm install -g pyright
 # claude plugin install pyright-lsp@claude-plugins-official
 
 # Replacement marketplace for LSP plugins, since the official one doesn't have any yet
-# https://github.com/Piebald-AI/claude-code-lsps/tree/main/pyright
+# https://github.com/Piebald-AI/claude-code-lsps/
 claude plugin marketplace add piebald-ai/claude-code-lsps
+# https://github.com/Piebald-AI/claude-code-lsps/tree/main/pyright
 claude plugin install pyright@claude-code-lsps
 
 # Upstash plugin
+# https://github.com/upstash/context7/
 claude plugin marketplace add upstash/context7
+# https://github.com/upstash/context7/tree/master/plugins/claude/context7
 claude plugin install context7-plugin@context7-marketplace
 
 # Whobson plugin
+# https://github.com/wshobson/agents
 claude plugin marketplace add wshobson/agents
+# https://github.com/wshobson/agents/tree/main/plugins/code-refactoring
 claude plugin install code-refactoring@claude-code-workflows
 
 # Ast-grep plugin
 # https://github.com/ast-grep/agent-skill
 claude plugin marketplace add ast-grep/agent-skill
+# https://github.com/ast-grep/agent-skill/tree/main/ast-grep
 claude plugin install ast-grep
 
 # MCP servers
