@@ -64,3 +64,5 @@ claude mcp add --scope user tessl -- tessl mcp start
 claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 # https://github.com/jgravelle/jcodemunch-mcp?tab=readme-ov-file#configure-mcp-client
 claude mcp add --scope user jcodemunch -- uvx jcodemunch-mcp
+# https://github.com/jgravelle/jdocmunch-mcp?tab=readme-ov-file#configure-an-mcp-client
+claude mcp add --scope user jdocmunch -- uvx jdocmunch-mcp
