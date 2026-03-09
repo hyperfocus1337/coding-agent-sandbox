@@ -57,6 +57,10 @@ claude plugin marketplace add astral-sh/claude-code-plugins
 # https://github.com/astral-sh/claude-code-plugins/tree/main/plugins/astral
 claude plugin install astral@astral-sh
 
-# MCP servers
+# Global MCP servers (user scoped)
+# https://docs.tessl.io/reference/custom-agent-setup
 claude mcp add --scope user tessl -- tessl mcp start
+# https://github.com/upstash/context7?tab=readme-ov-file#installation
 claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+# https://github.com/jgravelle/jcodemunch-mcp?tab=readme-ov-file#configure-mcp-client
+claude mcp add --scope user jcodemunch -- uvx jcodemunch-mcp
