@@ -132,7 +132,7 @@ COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish
 COPY --chown=$USERNAME:$USERNAME config/.profile /home/$USERNAME/.profile
 
 # Copy scripts into the image
-COPY --chown=$USERNAME:$USERNAME scripts/system/activate.fish /home/$USERNAME/scripts/system/activate.fish
+COPY --chown=$USERNAME:$USERNAME scripts/system/ /home/$USERNAME/scripts/system/
 COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
 
 # Pre-seed SSH known_hosts for GitHub
