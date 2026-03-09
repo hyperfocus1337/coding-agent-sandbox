@@ -68,7 +68,8 @@ RUN ARCH=$(dpkg --print-architecture) && \
 # Install Emacs to use Magit on server
 RUN mkdir -p /home/$USERNAME/.emacs.d
 COPY --chown=$USERNAME:$USERNAME config/init.el /home/$USERNAME/.emacs.d/init.el
-RUN bash /home/$USERNAME/scripts/system/emacs.sh
+COPY --chown=$USERNAME:$USERNAME scripts/system/emacs.sh /home/$USERNAME/scripts/system/emacs.sh
+RUN chmod +x /home/$USERNAME/scripts/system/emacs.sh && bash /home/$USERNAME/scripts/system/emacs.sh
 
 # Github CLI
 # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
