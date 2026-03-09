@@ -51,6 +51,12 @@ claude plugin marketplace add ast-grep/agent-skill
 # https://github.com/ast-grep/agent-skill/tree/main/ast-grep
 claude plugin install ast-grep
 
+# Astral plugins
+# https://github.com/astral-sh/claude-code-plugins
+claude plugin marketplace add astral-sh/claude-code-plugins
+# https://github.com/astral-sh/claude-code-plugins/tree/main/plugins/astral
+claude plugin install astral@astral-sh
+
 # MCP servers
 claude mcp add --scope user tessl -- tessl mcp start
 claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
