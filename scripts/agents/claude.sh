@@ -2,67 +2,19 @@
 
 set -e
 
-if ! command -v claude &>/dev/null; then
-    echo "ERROR: 'claude' not found in PATH. Check that the Claude Code install placed its binary in a directory on PATH." >&2
-    echo "PATH=$PATH" >&2
-    exit 1
-fi
+USERNAME=node
 
-# Official plugins
-# Official marketplace should be already installed (added for debugging)
-# https://github.com/anthropics/claude-code/tree/main/plugins/
-claude plugin marketplace add anthropics/claude-plugins-official
-# https://github.com/anthropics/claude-code/tree/main/plugins/code-review
-claude plugin install code-review@claude-plugins-official
-# https://github.com/anthropics/claude-code/tree/main/plugins/commit-commands
-claude plugin install commit-commands@claude-plugins-official
-# https://github.com/anthropics/claude-code/tree/main/plugins/feature-dev
-claude plugin install feature-dev@claude-plugins-official
+# Create repositories directory
+mkdir -p /home/$USERNAME/repositories
 
-# Install pyright for lsp server
-npm install -g pyright
+# Clone personal config from GitHub
+git clone https://github.com/hyperfocus1337/claude-marketplace.git /home/$USERNAME/repositories/claude-marketplace
 
-# Pyright LSP plugin (waiting to be released)
-# https://github.com/anthropics/claude-plugins-official/tree/main/plugins/pyright-lsp
-# Currently waiting on this: https://github.com/anthropics/claude-plugins-official/issues/379
-# claude plugin install pyright-lsp@claude-plugins-official
+# Navigate to integration script
+cd /home/$USERNAME/repositories/claude-marketplace/scripts
 
-# Replacement marketplace for LSP plugins, since the official one doesn't have any yet
-# https://github.com/Piebald-AI/claude-code-lsps/
-claude plugin marketplace add piebald-ai/claude-code-lsps
-# https://github.com/Piebald-AI/claude-code-lsps/tree/main/pyright
-claude plugin install pyright@claude-code-lsps
+# Run integration script to symlink commands, skills and CLAUDE.md to ~/.claude
+REPO=/home/$USERNAME/repositories/claude-marketplace ./integration/symlink.sh
 
-# Upstash plugin
-# https://github.com/upstash/context7/
-claude plugin marketplace add upstash/context7
-# https://github.com/upstash/context7/tree/master/plugins/claude/context7
-claude plugin install context7-plugin@context7-marketplace
-
-# Whobson plugin
-# https://github.com/wshobson/agents
-claude plugin marketplace add wshobson/agents
-# https://github.com/wshobson/agents/tree/main/plugins/code-refactoring
-claude plugin install code-refactoring@claude-code-workflows
-
-# Ast-grep plugin
-# https://github.com/ast-grep/agent-skill
-claude plugin marketplace add ast-grep/agent-skill
-# https://github.com/ast-grep/agent-skill/tree/main/ast-grep
-claude plugin install ast-grep
-
-# Astral plugins
-# https://github.com/astral-sh/claude-code-plugins
-claude plugin marketplace add astral-sh/claude-code-plugins
-# https://github.com/astral-sh/claude-code-plugins/tree/main/plugins/astral
-claude plugin install astral@astral-sh
-
-# Global MCP servers (user scoped)
-# https://docs.tessl.io/reference/custom-agent-setup
-claude mcp add --scope user tessl -- tessl mcp start
-# https://github.com/upstash/context7?tab=readme-ov-file#installation
-claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
-# https://github.com/jgravelle/jcodemunch-mcp?tab=readme-ov-file#configure-mcp-client
-claude mcp add --scope user jcodemunch -- uvx jcodemunch-mcp
-# https://github.com/jgravelle/jdocmunch-mcp?tab=readme-ov-file#configure-an-mcp-client
-claude mcp add --scope user jdocmunch -- uvx jdocmunch-mcp
+# Run the claude.sh script to install plugins and MCP servers
+./plugins/claude.sh
