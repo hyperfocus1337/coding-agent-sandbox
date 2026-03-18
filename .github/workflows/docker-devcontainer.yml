@@ -64,8 +64,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # GIT_DELTA_VERSION must be set as a repository variable (Settings → Variables → Actions)
+          # SSH_CONFIG must be set as a repository secret (Settings → Secrets → Actions)
           build-args: |
             TZ=UTC
             GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
+          secrets: |
+            ssh_config=${{ secrets.SSH_CONFIG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

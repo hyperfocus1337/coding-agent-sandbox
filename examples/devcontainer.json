@@ -43,7 +43,7 @@
     "source=coding-agent-sandbox-claude-config,target=/home/node/.claude,type=volume",
     "source=coding-agent-sandbox-cursor-state,target=/home/node/.cursor-server,type=volume",
     "source=coding-agent-sandbox-fish-history,target=/home/node/.local/share/fish,type=volume",
-    "source=${localEnv:HOME}/.ssh/config,target=/home/node/.ssh/config,type=bind,readonly",
+    "source=coding-agent-sandbox-ssh-config,target=/home/node/.ssh,type=volume",
     "source=${localEnv:HOME}/.ssh/gitops.click,target=/home/node/.ssh/gitops.click,type=bind,readonly"
   ],
   "containerEnv": {

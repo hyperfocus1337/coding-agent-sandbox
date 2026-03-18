@@ -141,9 +141,17 @@ COPY --chown=$USERNAME:$USERNAME config/.profile /home/$USERNAME/.profile
 COPY --chown=$USERNAME:$USERNAME scripts/system/ /home/$USERNAME/scripts/system/
 COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
 
-# Pre-seed SSH known_hosts for GitHub
+# Pre-seed known_hosts so git operations over SSH don't prompt for host verification
 RUN mkdir -p /home/$USERNAME/.ssh && \
     ssh-keyscan github.com >> /home/$USERNAME/.ssh/known_hosts 2>/dev/null
+
+# Install SSH client config from build secret (never written to an image layer)
+# Locally: --secret id=ssh_config,src=config/.ssh/config
+# In CI: sourced from the SSH_CONFIG Actions secret
+# uid/gid must match USER_UID/USER_GID above; ARG expansion is not supported in --mount flags
+RUN --mount=type=secret,id=ssh_config,uid=1000,gid=1000 \
+    cp /run/secrets/ssh_config /home/$USERNAME/.ssh/config && \
+    chmod 600 /home/$USERNAME/.ssh/config
 
 # Install Tessl CLI
 RUN curl -fsSL https://get.tessl.io | sh
