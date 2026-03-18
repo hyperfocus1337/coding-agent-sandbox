@@ -54,6 +54,12 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
+      # Write the SSH config secret to a temp file so it can be passed as a BuildKit
+      # secret-file. The secrets: input uses newlines as delimiters and would truncate
+      # multiline values to the first line; secret-files: does not have this limitation.
+      - name: Write SSH config secret to temp file
+        run: echo "${{ secrets.SSH_CONFIG }}" > /tmp/ssh_config
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -64,11 +70,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # GIT_DELTA_VERSION must be set as a repository variable (Settings → Variables → Actions)
-          # SSH_CONFIG must be set as a repository secret (Settings → Secrets → Actions)
           build-args: |
             TZ=UTC
             GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
-          secrets: |
-            ssh_config=${{ secrets.SSH_CONFIG }}
+          # SSH_CONFIG must be set as a repository secret (Settings → Secrets → Actions)
+          secret-files: |
+            ssh_config=/tmp/ssh_config
           cache-from: type=gha
           cache-to: type=gha,mode=max
