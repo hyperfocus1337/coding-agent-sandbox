@@ -55,10 +55,12 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       # Write the SSH config secret to a temp file so it can be passed as a BuildKit
-      # secret-file. The secrets: input uses newlines as delimiters and would truncate
-      # multiline values to the first line; secret-files: does not have this limitation.
+      # secret-file. Assigned via env: to prevent the Actions runner from expanding
+      # ${{ }} inline in the shell script, which can mangle multiline values.
       - name: Write SSH config secret to temp file
-        run: echo "${{ secrets.SSH_CONFIG }}" > /tmp/ssh_config
+        env:
+          SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
+        run: printf '%s' "$SSH_CONFIG" > /tmp/ssh_config
 
       - name: Build and push
         uses: docker/build-push-action@v6
