@@ -1,7 +1,7 @@
 TZ := env("TZ", "Europe/Amsterdam")
 GIT_DELTA_VERSION := "0.18.2"
-IMAGE := "coding-agent-sandbox-devcontainer"
-VERSION := "6.0-trixie"
+IMAGE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer"
+VERSION := "main"
 
 # Build the devcontainer Docker image and tag it with the current VERSION
 build:
