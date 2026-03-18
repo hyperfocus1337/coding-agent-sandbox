@@ -150,7 +150,6 @@ RUN curl -fsSL https://get.tessl.io | sh
 
 # Install Claude Code plugins and MCP servers
 RUN bash /home/$USERNAME/scripts/agents/claude.sh
-RUN bash /home/$USERNAME/scripts/agents/clone.sh
 
 # Install Gemini extensions
 # RUN bash /home/$USERNAME/scripts/agents/gemini.sh
