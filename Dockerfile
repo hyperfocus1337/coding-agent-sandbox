@@ -102,6 +102,15 @@ RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 # Drop to non-root user for runtime
 USER $USERNAME
 
+# Add UV-managed CLIs to PATH.
+# UV_TOOL_BIN_DIR must be set explicitly: without it, uv's default can vary by version (e.g.
+# newer uv Docker images default to /usr/local/bin which is not writable by a non-root user).
+ENV UV_TOOL_BIN_DIR="/home/$USERNAME/.local/bin"
+ENV PATH="/home/$USERNAME/.local/bin:$PATH"
+
+# Install just CLI
+RUN uv tool install rust-just
+
 # Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain)
 ARG JUST_LSP_VERSION=0.3.4
 RUN mkdir -p /home/$USERNAME/.local/bin && \
@@ -118,7 +127,7 @@ RUN mkdir -p /home/$USERNAME/.local/bin && \
 # NPM_CONFIG_PREFIX points to a system path so binaries land in /usr/local/share/npm-global/bin,
 # outside $HOME and unaffected by the devcontainer volume mount.
 ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
-ENV PATH="/usr/local/share/npm-global/bin:/home/$USERNAME/.local/bin:$PATH"
+ENV PATH="/usr/local/share/npm-global/bin:$PATH"
 
 # Install Claude Code CLI official installation script
 # https://code.claude.com/docs/en/setup
