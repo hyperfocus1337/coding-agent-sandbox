@@ -99,6 +99,13 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
 ARG IMAGE_VERSION
 RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 
+# Playwright: system deps + Chromium (root). PLAYWRIGHT_BROWSERS_PATH + chown so $USERNAME can run browsers.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
+    uv run --with playwright playwright install-deps && \
+    uv run --with playwright playwright install chromium && \
+    chown -R "$USERNAME:$USERNAME" "$PLAYWRIGHT_BROWSERS_PATH"
+
 # Drop to non-root user for runtime
 USER $USERNAME
 
