@@ -3,8 +3,8 @@
 # Determine project and venv paths via devcontainer-injected env var
 set -l venv_dir $WORKSPACE_FOLDER/devcontainer/.venv
 
-# If direnv is available, authorize .envrc for this project without changing directories
-if type -q direnv
+# If direnv is available and .envrc exists, authorize for this project without changing directories
+if type -q direnv; and test -f "$WORKSPACE_FOLDER/.envrc"
     direnv allow $WORKSPACE_FOLDER
     echo "[activate.fish] Authorized .envrc for $WORKSPACE_FOLDER" >&2
 end
