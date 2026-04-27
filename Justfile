@@ -15,3 +15,19 @@ build:
         --tag {{ IMAGE }}:latest \
         --file Dockerfile \
         .
+
+up:
+    devcontainer up
+
+stop:
+    docker stop coding-agent-sandbox-devcontainer
+
+remove:
+    docker stop coding-agent-sandbox-devcontainer
+    docker rm coding-agent-sandbox-devcontainer
+
+enter:
+    devcontainer exec fish
+
+docker-enter:
+    docker exec -it coding-agent-sandbox-devcontainer fish
