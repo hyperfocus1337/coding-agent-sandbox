@@ -55,7 +55,7 @@ RUN mkdir -p /workspace \
     chown -R $USERNAME:$USERNAME /workspace /home/$USERNAME/.claude /home/$USERNAME/.local \
     /home/$USERNAME/.cursor-server
 
-WORKDIR /workspace
+WORKDIR /workspaces
 
 # Git Delta tool for pretty printing git diffs
 ARG GIT_DELTA_VERSION
