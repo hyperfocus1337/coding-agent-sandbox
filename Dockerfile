@@ -158,6 +158,10 @@ ENV VISUAL="vim"
 COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish/config.fish
 COPY --chown=$USERNAME:$USERNAME config/.profile /home/$USERNAME/.profile
 
+# Hardcode copy SSH and git configs
+COPY --chown=$USERNAME:$USERNAME config/.gitconfig /home/$USERNAME/.gitconfig
+COPY --chown=$USERNAME:$USERNAME config/.ssh/config /home/$USERNAME/.ssh/config
+
 # Copy scripts into the image
 COPY --chown=$USERNAME:$USERNAME scripts/system/ /home/$USERNAME/scripts/system/
 COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
