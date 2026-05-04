@@ -22,7 +22,7 @@ up:
 stop:
     docker stop coding-agent-sandbox-devcontainer
 
-remove:
+rm:
     docker stop coding-agent-sandbox-devcontainer
     docker rm coding-agent-sandbox-devcontainer
 
