@@ -34,7 +34,8 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     direnv \
     python3 \
     python3-pip \
-    python3-venv
+    python3-venv \
+    postgresql-client
 
 # Install Starship prompt
 RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes && \
