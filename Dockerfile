@@ -97,6 +97,16 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     apt-get update && apt-get install -y bubblewrap socat seccomp && \
     npm install -g @anthropic-ai/sandbox-runtime
 
+# Install Corepack for pnpm/yarn shims. As of Node.js 25 Corepack is no longer
+# bundled with Node (TSC vote, March 2025), so it must be installed from npm.
+# `corepack prepare` downloads the package manager version and caches it in the
+# corepack store; `--activate` sets it as the default used when a project has no
+# `packageManager` field in package.json (project-level pins always take precedence).
+RUN npm install -g corepack@latest && \
+    corepack enable && \
+    corepack prepare pnpm@latest --activate && \
+    corepack prepare yarn@stable --activate
+
 # Image version stamp for home-dir initialization tracking (written before USER switch)
 ARG IMAGE_VERSION
 RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
