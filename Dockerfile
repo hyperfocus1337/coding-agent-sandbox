@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-# https://github.com/nodejs/docker-node/tree/main/25/trixie
-FROM node:25-trixie
+# https://github.com/nodejs/docker-node/tree/main/26/trixie
+FROM node:26-trixie
 
 # Pass timezone as build argument
 ARG TZ
@@ -97,7 +97,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     apt-get update && apt-get install -y bubblewrap socat seccomp && \
     npm install -g @anthropic-ai/sandbox-runtime
 
-# Install Corepack for pnpm/yarn shims. As of Node.js 25 Corepack is no longer
+# Install Corepack for pnpm/yarn shims. As of Node.js 25+ Corepack is no longer
 # bundled with Node (TSC vote, March 2025), so it must be installed from npm.
 # `corepack prepare` downloads the package manager version and caches it in the
 # corepack store; `--activate` sets it as the default used when a project has no
