@@ -1,6 +1,7 @@
 # Change default editor to vim
-set -x VISUAL vim
-set -x KUBE_EDITOR vim
+set -x VISUAL nvim
+set -x KUBE_EDITOR nvim
+alias vim nvim
 
 # Add local bin directory
 fish_add_path "/home/node/.local/bin"

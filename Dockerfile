@@ -30,7 +30,8 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     wget \
     dnsutils \
     jq \
-    vim \
+    tree \
+    neovim \
     direnv \
     python3 \
     python3-pip \
