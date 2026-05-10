@@ -102,10 +102,20 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
 # `corepack prepare` downloads the package manager version and caches it in the
 # corepack store; `--activate` sets it as the default used when a project has no
 # `packageManager` field in package.json (project-level pins always take precedence).
-RUN npm install -g corepack@latest && \
+#
+# Pin versions: `pnpm@latest` / `yarn@stable` resolve tags via extra registry
+# metadata fetches that are brittle during `docker build` (network/DNS flakiness).
+# No defaults here—pass `--build-arg` (see `Justfile` and `.github/workflows/docker-devcontainer.yml`).
+ARG PNPM_COREPACK_VERSION
+ARG YARN_COREPACK_VERSION
+RUN --mount=type=cache,target=/root/.npm \
+    set -eu; \
+    : "${PNPM_COREPACK_VERSION:?PNPM_COREPACK_VERSION is required (use Justfile or docker build --build-arg)}"; \
+    : "${YARN_COREPACK_VERSION:?YARN_COREPACK_VERSION is required (use Justfile or docker build --build-arg)}"; \
+    npm install -g corepack@latest && \
     corepack enable && \
-    corepack prepare pnpm@latest --activate && \
-    corepack prepare yarn@stable --activate
+    corepack prepare "pnpm@${PNPM_COREPACK_VERSION}" --activate && \
+    corepack prepare "yarn@${YARN_COREPACK_VERSION}" --activate
 
 # Image version stamp for home-dir initialization tracking (written before USER switch)
 ARG IMAGE_VERSION

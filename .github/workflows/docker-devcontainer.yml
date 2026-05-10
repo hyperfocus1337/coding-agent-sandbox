@@ -71,10 +71,13 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # GIT_DELTA_VERSION must be set as a repository variable (Settings → Variables → Actions)
+          # GIT_DELTA_VERSION must be set as a repository variable (Settings → Variables → Actions).
+          # Keep PNPM_COREPACK_VERSION and YARN_COREPACK_VERSION aligned with defaults in Justfile unless you define matching repo variables.
           build-args: |
             TZ=UTC
             GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
+            PNPM_COREPACK_VERSION=${{ vars.PNPM_COREPACK_VERSION || '11.0.9' }}
+            YARN_COREPACK_VERSION=${{ vars.YARN_COREPACK_VERSION || '4.14.1' }}
           # SSH_CONFIG must be set as a repository secret (Settings → Secrets → Actions)
           secret-files: |
             ssh_config=/tmp/ssh_config

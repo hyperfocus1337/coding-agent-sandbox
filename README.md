@@ -24,7 +24,7 @@ Run `just` from the **repository root** (where `Dockerfile` and `Justfile` live)
 just build
 ```
 
-Produces two tags using the Just variables `IMAGE` and `VERSION`: for example `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer:local` and `…:latest` with the defaults in the table below. The build also requires `config/.ssh/config` for BuildKit secret `ssh_config` (see `Dockerfile`).
+Produces two tags using the Just variables `IMAGE` and `VERSION`: for example `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer:local` and `…:latest` with the defaults in the table below. The Dockerfile does **not** embed Corepack semver defaults; `just build` and CI pass them. The build also requires `config/.ssh/config` for BuildKit secret `ssh_config` (see `Dockerfile`).
 
 The following variables can be overridden at invocation time (see the `Justfile` for the full list):
 
@@ -32,6 +32,8 @@ The following variables can be overridden at invocation time (see the `Justfile`
 | ------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `TZ`                      | `Europe/Amsterdam` (or `$TZ` from the environment)         | Timezone baked into the image                                                                                          |
 | `GIT_DELTA_VERSION`       | `0.18.2`                                                   | Version of [git-delta](https://github.com/dandavison/delta) to install                                                 |
+| `PNPM_COREPACK_VERSION`   | `11.0.9`                                                   | Pinned semver for `pnpm` (Corepack `prepare`)                                                                          |
+| `YARN_COREPACK_VERSION`   | `4.14.1`                                                   | Pinned semver for Yarn Berry (Corepack `prepare`)                                                                      |
 | `IMAGE`                   | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer` | Registry/repository path for `docker build` tags                                                                       |
 | `VERSION`                 | `local`                                                    | Primary image tag (also written into `IMAGE_VERSION` for the image stamp)                                              |
 | `CONTAINER_USER_PASSWORD` | _empty_                                                    | If set, configures the dev user’s **Unix** password and enables `sudo apt install …` inside the container (see below). |
