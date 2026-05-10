@@ -5,10 +5,15 @@ FROM ${BASE_IMAGE}
 # Base image ends as non-root; Playwright install-deps uses sudo when not root, which fails in `docker build`.
 USER root
 
-# ARG: build-only; `--build-arg USERNAME=...` overrides chown target. Not kept in the running container.
+# Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
+# `--build-arg USERNAME=...` overrides; ENV on the next line propagates the value to runtime shells.
 ARG USERNAME=node
-# ENV: persist the same value at runtime for shells and tools that read $USERNAME.
 ENV USERNAME=${USERNAME}
+
+# Numeric uid/gid for `--mount=type=cache,uid=,gid=` below — must match the non-root user
+# so npm cache writes are owned correctly and avoid permission errors.
+ARG USER_UID=1000
+ARG USER_GID=1000
 
 # Playwright: system deps + Chromium (root). PLAYWRIGHT_BROWSERS_PATH + chown so $USERNAME can run browsers.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
@@ -18,3 +23,9 @@ RUN mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
   chown -R "$USERNAME:$USERNAME" "$PLAYWRIGHT_BROWSERS_PATH"
 
 USER ${USERNAME}
+
+# Install Microsoft Playwright agent CLI + skills bundle. Distinct from the `playwright`
+# browser package installed above — this is the agent-facing CLI from microsoft/playwright-cli.
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @playwright/cli@latest && \
+    playwright-cli install --skills
