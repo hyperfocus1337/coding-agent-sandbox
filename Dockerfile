@@ -123,16 +123,17 @@ RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 
 # Sudo + optional login password for ad-hoc root installs (`sudo apt install …`).
 # The official node image does not put `node` in the sudo group or set a password.
-# Pass BuildKit secret `container_user_password` (avoid --build-arg: it can appear in
+# Pass BuildKit secret `container_user_password` (avoid `--build-arg`: it can appear in
 # `docker image history`). Omit the secret entirely if you do not need password sudo.
 #
 # Locally: `--secret id=container_user_password,src=./config/.sudo-password` (see Justfile)
+# Strip CR/LF from the secret file so CRLF editors do not bake `\r` into the password hash.
 # If omitted, sudo is unusable until a root-capable step sets one, e.g.:
 #   docker exec -u root -it <container> passwd node
 RUN --mount=type=secret,id=container_user_password,required=false \
     usermod -aG sudo "$USERNAME" && \
     if [ -s /run/secrets/container_user_password ]; then \
-    PASSWORD="$(tr -d '\n' </run/secrets/container_user_password)" && \
+    PASSWORD="$(tr -d '\r\n' </run/secrets/container_user_password)" && \
     printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd; \
     fi
 
