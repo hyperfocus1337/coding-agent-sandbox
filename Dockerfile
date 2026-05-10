@@ -150,7 +150,7 @@ RUN uv tool install rust-just
 
 # Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain).
 # Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
-ARG JUST_LSP_VERSION=0.3.4
+ARG JUST_LSP_VERSION
 RUN mkdir -p /home/$USERNAME/.local/bin && \
     ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
@@ -180,6 +180,11 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 # https://geminicli.com/docs/get-started/installation/
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g @google/gemini-cli
+
+# Install OpenCode
+# https://opencode.ai/docs/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g opencode-ai
 
 # Set the default editor and visual
 ENV EDITOR="vim"
