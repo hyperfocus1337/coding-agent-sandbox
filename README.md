@@ -56,8 +56,10 @@ printf '%s\n' 'your-dev-only-secret' > config/.sudo-password
 just build
 ```
 
-If that file is absent (the default on CI), password-based `sudo` is unavailable until a root-capable step sets one, for example:
+If that file is absent, password-based `sudo` is unavailable until a root-capable step sets one, for example:
 
 ```bash
 docker exec -u root -it coding-agent-sandbox-devcontainer passwd node
 ```
+
+For **GitHub Actions** builds, optionally add a repository secret `CONTAINER_USER_PASSWORD` (same one-line throwaway value); the workflow writes it to a BuildKit secret so the image gets an interactive `sudo` password without a `--build-arg`. Leave the secret unset to skip (typical for CI).

@@ -60,7 +60,12 @@ jobs:
       - name: Write BuildKit secret files
         env:
           SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
-        run: printf '%s' "$SSH_CONFIG" > /tmp/ssh_config
+          # Optional disposable `node` password for `sudo` in the image.
+          # Create repository secret `CONTAINER_USER_PASSWORD` (Settings → Secrets → Actions), or rename here and below.
+          CONTAINER_USER_PASSWORD: ${{ secrets.CONTAINER_USER_PASSWORD }}
+        run: |
+          printf '%s' "$SSH_CONFIG" > /tmp/ssh_config
+          printf '%s' "$CONTAINER_USER_PASSWORD" > /tmp/container_user_password
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -80,5 +85,6 @@ jobs:
             YARN_COREPACK_VERSION=${{ vars.YARN_COREPACK_VERSION || '4.14.1' }}
           secret-files: |
             ssh_config=/tmp/ssh_config
+            container_user_password=/tmp/container_user_password
           cache-from: type=gha
           cache-to: type=gha,mode=max

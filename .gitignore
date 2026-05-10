@@ -1,5 +1,4 @@
 .envrc
 config/.ssh/config
-config/.gitconfig
 config/.sudo-password
 .devcontainer

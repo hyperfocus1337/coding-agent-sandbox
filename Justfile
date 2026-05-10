@@ -15,10 +15,12 @@ build:
     #!/usr/bin/env bash
     set -euo pipefail
     SECRET_ARGS=()
+    # Check if the SSH config file exists (-f) and is not empty (-s)
     if [[ -f "{{ SSH_CONFIG_FILE }}" ]] && [[ -s "{{ SSH_CONFIG_FILE }}" ]]; then
         SECRET_ARGS+=(--secret id=ssh_config,src="{{ SSH_CONFIG_FILE }}")
     fi
-    if [[ -f "{{ SUDO_PASSWORD_FILE }}" ]]; then
+    # Check if the sudo password file exists (-f) and is not empty (-s)
+    if [[ -f "{{ SUDO_PASSWORD_FILE }}" ]] && [[ -s "{{ SUDO_PASSWORD_FILE }}" ]]; then
         SECRET_ARGS+=(--secret id=container_user_password,src="{{ SUDO_PASSWORD_FILE }}")
     fi
     docker build \
