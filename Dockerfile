@@ -118,6 +118,20 @@ RUN mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
     uv run --with playwright playwright install chromium && \
     chown -R "$USERNAME:$USERNAME" "$PLAYWRIGHT_BROWSERS_PATH"
 
+# Sudo + optional login password for ad-hoc root installs (`sudo apt install …`).
+# The official node image does not put `node` in the sudo group or set a password.
+# Example: docker build --build-arg CONTAINER_USER_PASSWORD=yourdevsecret …
+# If you omit the arg, sudo is unusable until a root-capable step sets one, e.g.:
+#   docker exec -u root -it <container> passwd node
+#
+# Avoid real secrets here: values may show up under `docker image history`. For CI,
+# prefer a disposable password or a root RUN that installs packages instead.
+ARG CONTAINER_USER_PASSWORD
+RUN usermod -aG sudo "$USERNAME" && \
+    if [ -n "$CONTAINER_USER_PASSWORD" ]; then \
+    printf '%s:%s\n' "$USERNAME" "$CONTAINER_USER_PASSWORD" | chpasswd; \
+    fi
+
 # Drop to non-root user for runtime
 USER $USERNAME
 
