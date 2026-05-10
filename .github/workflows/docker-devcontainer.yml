@@ -54,10 +54,10 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Write the SSH config secret to a temp file so it can be passed as a BuildKit
-      # secret-file. Assigned via env: to prevent the Actions runner from expanding
-      # ${{ }} inline in the shell script, which can mangle multiline values.
-      - name: Write SSH config secret to temp file
+      # Dockerfile uses BuildKit optional secret `ssh_config` (same as local `--secret`).
+      # Write repo secret SSH_CONFIG → file; assign via env: so multiline values are not
+      # mangled by ${{ }} shell expansion. Empty/unset → image still builds (no ~/.ssh/config).
+      - name: Write BuildKit secret files
         env:
           SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
         run: printf '%s' "$SSH_CONFIG" > /tmp/ssh_config
@@ -78,7 +78,6 @@ jobs:
             GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
             PNPM_COREPACK_VERSION=${{ vars.PNPM_COREPACK_VERSION || '11.0.9' }}
             YARN_COREPACK_VERSION=${{ vars.YARN_COREPACK_VERSION || '4.14.1' }}
-          # SSH_CONFIG must be set as a repository secret (Settings → Secrets → Actions)
           secret-files: |
             ssh_config=/tmp/ssh_config
           cache-from: type=gha

@@ -123,16 +123,17 @@ RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 
 # Sudo + optional login password for ad-hoc root installs (`sudo apt install …`).
 # The official node image does not put `node` in the sudo group or set a password.
-# Example: docker build --build-arg CONTAINER_USER_PASSWORD=yourdevsecret …
-# If you omit the arg, sudo is unusable until a root-capable step sets one, e.g.:
-#   docker exec -u root -it <container> passwd node
+# Pass BuildKit secret `container_user_password` (avoid --build-arg: it can appear in
+# `docker image history`). Omit the secret entirely if you do not need password sudo.
 #
-# Avoid real secrets here: values may show up under `docker image history`. For CI,
-# prefer a disposable password or a root RUN that installs packages instead.
-ARG CONTAINER_USER_PASSWORD
-RUN usermod -aG sudo "$USERNAME" && \
-    if [ -n "$CONTAINER_USER_PASSWORD" ]; then \
-    printf '%s:%s\n' "$USERNAME" "$CONTAINER_USER_PASSWORD" | chpasswd; \
+# Locally: `--secret id=container_user_password,src=./config/.sudo-password` (see Justfile)
+# If omitted, sudo is unusable until a root-capable step sets one, e.g.:
+#   docker exec -u root -it <container> passwd node
+RUN --mount=type=secret,id=container_user_password,required=false \
+    usermod -aG sudo "$USERNAME" && \
+    if [ -s /run/secrets/container_user_password ]; then \
+    PASSWORD="$(tr -d '\n' </run/secrets/container_user_password)" && \
+    printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd; \
     fi
 
 # Drop to non-root user for runtime
@@ -187,25 +188,27 @@ ENV VISUAL="vim"
 COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish/config.fish
 COPY --chown=$USERNAME:$USERNAME config/.profile /home/$USERNAME/.profile
 
-# Hardcode copy SSH and git configs
-COPY --chown=$USERNAME:$USERNAME config/.gitconfig /home/$USERNAME/.gitconfig
-COPY --chown=$USERNAME:$USERNAME config/.ssh/config /home/$USERNAME/.ssh/config
+# Git defaults (committed). Personal secrets stay out of Git; SSH client config uses
+# the BuildKit secret `ssh_config` below (never COPY gitignored paths into the graph).
+COPY --chown=$USERNAME:$USERNAME config/default.gitconfig /home/$USERNAME/.gitconfig
 
 # Copy scripts into the image
 COPY --chown=$USERNAME:$USERNAME scripts/system/ /home/$USERNAME/scripts/system/
 COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
 
-# Pre-seed known_hosts so git operations over SSH don't prompt for host verification
-RUN mkdir -p /home/$USERNAME/.ssh && \
-    ssh-keyscan github.com >> /home/$USERNAME/.ssh/known_hosts 2>/dev/null
-
-# Install SSH client config from build secret (never written to an image layer)
-# Locally: --secret id=ssh_config,src=config/.ssh/config
-# In CI: sourced from the SSH_CONFIG Actions secret
-# uid/gid must match USER_UID/USER_GID above; ARG expansion is not supported in --mount flags
-RUN --mount=type=secret,id=ssh_config,uid=1000,gid=1000 \
+# SSH bootstrap (same logic for local and CI — no COPY of gitignored paths).
+# BuildKit secret `ssh_config` is optional (`required=false`). When the secret is
+# omitted or empty, we only seed known_hosts; when it has content (local file or
+# GitHub Actions secret → secret-files), we install ~/.ssh/config without baking it
+# into a layer. uid/gid must match USER_UID/USER_GID; ARG expansion is not allowed
+# in --mount flags.
+RUN --mount=type=secret,id=ssh_config,required=false,uid=1000,gid=1000 \
+    mkdir -p /home/$USERNAME/.ssh && \
+    ssh-keyscan github.com >> /home/$USERNAME/.ssh/known_hosts 2>/dev/null && \
+    if [ -f /run/secrets/ssh_config ] && [ -s /run/secrets/ssh_config ]; then \
     cp /run/secrets/ssh_config /home/$USERNAME/.ssh/config && \
-    chmod 600 /home/$USERNAME/.ssh/config
+    chmod 600 /home/$USERNAME/.ssh/config; \
+    fi
 
 # Install Tessl CLI
 RUN curl -fsSL https://get.tessl.io | sh

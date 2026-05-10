@@ -6,33 +6,28 @@ IMAGE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer"
 VERSION := "local"
 SSH_CONFIG_FILE := "config/.ssh/config"
 
-# Optional: Dockerfile sets `$USERNAME`'s Unix password via `CONTAINER_USER_PASSWORD` so `sudo apt install …`
-# works inside the container. The upstream node image puts `node` in neither `sudo` nor a password-bearing state by default.
-#
-# Prefer a disposable dev-only value: build args may be visible via `docker image history`. Omit it for CI or when
-# packages are baked in via root RUN lines instead.
-#
-# Set when building, e.g. `CONTAINER_USER_PASSWORD=secret just build`.
-# Without it here, sudo is unusable until you set a password from a root context, e.g.
-# `docker exec -u root -it coding-agent-sandbox-devcontainer passwd node`.
-export CONTAINER_USER_PASSWORD := env("CONTAINER_USER_PASSWORD", "")
+# Optional: one-line file with a disposable Unix password for `$USERNAME` (BuildKit secret
+# `container_user_password`; not stored in image history like a `--build-arg`). Omit for CI.
+SUDO_PASSWORD_FILE := "config/.sudo-password"
 
 # Build the devcontainer Docker image and tag it with the current VERSION
 build:
     #!/usr/bin/env bash
     set -euo pipefail
-    PASSWORD_ARGS=()
-    if [[ -n "${CONTAINER_USER_PASSWORD}" ]]; then
-        PASSWORD_ARGS+=(--build-arg "CONTAINER_USER_PASSWORD=${CONTAINER_USER_PASSWORD}")
+    SECRET_ARGS=()
+    if [[ -f "{{ SSH_CONFIG_FILE }}" ]] && [[ -s "{{ SSH_CONFIG_FILE }}" ]]; then
+        SECRET_ARGS+=(--secret id=ssh_config,src="{{ SSH_CONFIG_FILE }}")
+    fi
+    if [[ -f "{{ SUDO_PASSWORD_FILE }}" ]]; then
+        SECRET_ARGS+=(--secret id=container_user_password,src="{{ SUDO_PASSWORD_FILE }}")
     fi
     docker build \
-        "${PASSWORD_ARGS[@]}" \
+        "${SECRET_ARGS[@]}" \
         --build-arg TZ="{{ TZ }}" \
         --build-arg GIT_DELTA_VERSION="{{ GIT_DELTA_VERSION }}" \
         --build-arg PNPM_COREPACK_VERSION="{{ PNPM_COREPACK_VERSION }}" \
         --build-arg YARN_COREPACK_VERSION="{{ YARN_COREPACK_VERSION }}" \
         --build-arg IMAGE_VERSION="{{ VERSION }}-$(date +%Y%m%d%H%M%S)" \
-        --secret id=ssh_config,src="{{ SSH_CONFIG_FILE }}" \
         --tag "{{ IMAGE }}:{{ VERSION }}" \
         --tag "{{ IMAGE }}:latest" \
         --file Dockerfile \
