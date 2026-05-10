@@ -24,7 +24,11 @@ Run `just` from the **repository root** (where `Dockerfile` and `Justfile` live)
 just build
 ```
 
-Produces two tags using the Just variables `IMAGE` and `VERSION`: for example `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer:local` and `…:latest` with the defaults in the table below. The Dockerfile does **not** embed Corepack semver defaults; `just build` and CI pass them. SSH client config uses the optional BuildKit secret `ssh_config` (same mechanism locally and in GitHub Actions: repo secret `SSH_CONFIG` → `secret-files`). If the secret is missing or empty, the image is built without `~/.ssh/config` (known_hosts for `github.com` is still added).
+Produces two tags using the Just variables `IMAGE` and `VERSION`: for example `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer:local` and `…:latest` with the defaults in the table below. The Dockerfile does **not** embed Corepack semver defaults; `just build` and CI pass them. 
+
+In **GitHub Actions**, `GIT_DELTA_VERSION`, `PNPM_COREPACK_VERSION`, `YARN_COREPACK_VERSION`, and `JUST_LSP_VERSION` are supplied from repository variables (**Settings → Secrets and variables → Actions → Variables**); keep those values aligned with the Justfile defaults when you bump pins.
+
+SSH client config uses the optional BuildKit secret `ssh_config` (same mechanism locally and in GitHub Actions: repo secret `SSH_CONFIG` → `secret-files`). If the secret is missing or empty, the image is built without `~/.ssh/config` (known_hosts for `github.com` is still added).
 
 The following variables can be overridden at invocation time (see the `Justfile` for the full list):
 
@@ -34,6 +38,7 @@ The following variables can be overridden at invocation time (see the `Justfile`
 | `GIT_DELTA_VERSION`     | `0.18.2`                                                   | Version of [git-delta](https://github.com/dandavison/delta) to install                                                                                               |
 | `PNPM_COREPACK_VERSION` | `11.0.9`                                                   | Pinned semver for `pnpm` (Corepack `prepare`)                                                                                                                        |
 | `YARN_COREPACK_VERSION` | `4.14.1`                                                   | Pinned semver for Yarn Berry (Corepack `prepare`)                                                                                                                    |
+| `JUST_LSP_VERSION`      | `0.3.4`                                                    | [just-lsp](https://github.com/terror/just-lsp) release tag; set matching **Actions variable** for CI builds                                                          |
 | `IMAGE`                 | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer` | Registry/repository path for `docker build` tags                                                                                                                     |
 | `VERSION`               | `local`                                                    | Primary image tag (also written into `IMAGE_VERSION` for the image stamp)                                                                                            |
 | `SUDO_PASSWORD_FILE`    | `config/.sudo-password`                                    | Optional one-line disposable password file; passed as secret `container_user_password` so it does **not** land in image history                                      |

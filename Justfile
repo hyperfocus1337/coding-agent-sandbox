@@ -2,6 +2,7 @@ TZ := env("TZ", "Europe/Amsterdam")
 GIT_DELTA_VERSION := "0.18.2"
 PNPM_COREPACK_VERSION := env("PNPM_COREPACK_VERSION", "11.0.9")
 YARN_COREPACK_VERSION := env("YARN_COREPACK_VERSION", "4.14.1")
+JUST_LSP_VERSION := env("JUST_LSP_VERSION", "0.3.4")
 IMAGE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer"
 VERSION := "local"
 SSH_CONFIG_FILE := "config/.ssh/config"
@@ -29,6 +30,7 @@ build:
         --build-arg GIT_DELTA_VERSION="{{ GIT_DELTA_VERSION }}" \
         --build-arg PNPM_COREPACK_VERSION="{{ PNPM_COREPACK_VERSION }}" \
         --build-arg YARN_COREPACK_VERSION="{{ YARN_COREPACK_VERSION }}" \
+        --build-arg JUST_LSP_VERSION="{{ JUST_LSP_VERSION }}" \
         --build-arg IMAGE_VERSION="{{ VERSION }}-$(date +%Y%m%d%H%M%S)" \
         --tag "{{ IMAGE }}:{{ VERSION }}" \
         --tag "{{ IMAGE }}:latest" \

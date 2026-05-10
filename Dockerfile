@@ -148,8 +148,9 @@ ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 # Install just CLI
 RUN uv tool install rust-just
 
-# Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain)
-ARG JUST_LSP_VERSION
+# Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain).
+# Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
+ARG JUST_LSP_VERSION=0.3.4
 RUN mkdir -p /home/$USERNAME/.local/bin && \
     ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
