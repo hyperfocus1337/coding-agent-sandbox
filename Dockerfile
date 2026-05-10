@@ -187,8 +187,8 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
     npm install -g opencode-ai
 
 # Set the default editor and visual
-ENV EDITOR="vim"
-ENV VISUAL="vim"
+ENV EDITOR="nvim"
+ENV VISUAL="nvim"
 
 # Copy user configurations
 COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish/config.fish
