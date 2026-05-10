@@ -1,0 +1,20 @@
+# Override with `--build-arg BASE_IMAGE=...` (Justfile/CI pin the base devcontainer).
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer:latest
+FROM ${BASE_IMAGE}
+
+# Base image ends as non-root; Playwright install-deps uses sudo when not root, which fails in `docker build`.
+USER root
+
+# ARG: build-only; `--build-arg USERNAME=...` overrides chown target. Not kept in the running container.
+ARG USERNAME=node
+# ENV: persist the same value at runtime for shells and tools that read $USERNAME.
+ENV USERNAME=${USERNAME}
+
+# Playwright: system deps + Chromium (root). PLAYWRIGHT_BROWSERS_PATH + chown so $USERNAME can run browsers.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
+  uv run --with playwright playwright install-deps && \
+  uv run --with playwright playwright install chromium && \
+  chown -R "$USERNAME:$USERNAME" "$PLAYWRIGHT_BROWSERS_PATH"
+
+USER ${USERNAME}

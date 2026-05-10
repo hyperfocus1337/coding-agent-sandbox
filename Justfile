@@ -4,6 +4,8 @@ PNPM_COREPACK_VERSION := env("PNPM_COREPACK_VERSION", "11.0.9")
 YARN_COREPACK_VERSION := env("YARN_COREPACK_VERSION", "4.14.1")
 JUST_LSP_VERSION := env("JUST_LSP_VERSION", "0.3.4")
 IMAGE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer"
+# Extends the base devcontainer image with Playwright (Chromium + system deps).
+IMAGE_PLAYWRIGHT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright"
 VERSION := "local"
 SSH_CONFIG_FILE := "config/.ssh/config"
 
@@ -11,8 +13,8 @@ SSH_CONFIG_FILE := "config/.ssh/config"
 # `container_user_password`; not stored in image history like a `--build-arg`). Omit for CI.
 SUDO_PASSWORD_FILE := "config/.sudo-password"
 
-# Build the devcontainer Docker image and tag it with the current VERSION
-build:
+# Base devcontainer image (tags :latest for the Playwright stage FROM).
+build-base:
     #!/usr/bin/env bash
     set -euo pipefail
     SECRET_ARGS=()
@@ -36,6 +38,18 @@ build:
         --tag "{{ IMAGE }}:latest" \
         --file Dockerfile \
         .
+
+# Playwright layer on top of {{ IMAGE }}:latest (run after build-base or publish of :latest).
+build-playwright:
+    docker build \
+        --build-arg BASE_IMAGE="{{ IMAGE }}:latest" \
+        --tag "{{ IMAGE_PLAYWRIGHT }}:{{ VERSION }}" \
+        --tag "{{ IMAGE_PLAYWRIGHT }}:latest" \
+        --file playwright \
+        .
+
+# Build the base devcontainer image and the Playwright-extended image.
+build: build-base build-playwright
 
 up:
     devcontainer up
