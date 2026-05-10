@@ -111,13 +111,6 @@ RUN npm install -g corepack@latest && \
 ARG IMAGE_VERSION
 RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 
-# Playwright: system deps + Chromium (root). PLAYWRIGHT_BROWSERS_PATH + chown so $USERNAME can run browsers.
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
-    uv run --with playwright playwright install-deps && \
-    uv run --with playwright playwright install chromium && \
-    chown -R "$USERNAME:$USERNAME" "$PLAYWRIGHT_BROWSERS_PATH"
-
 # Sudo + optional login password for ad-hoc root installs (`sudo apt install …`).
 # The official node image does not put `node` in the sudo group or set a password.
 # Example: docker build --build-arg CONTAINER_USER_PASSWORD=yourdevsecret …
