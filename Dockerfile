@@ -209,7 +209,7 @@ COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
 # GitHub Actions secret → secret-files), we install ~/.ssh/config without baking it
 # into a layer. uid/gid must match USER_UID/USER_GID; ARG expansion is not allowed
 # in --mount flags.
-RUN --mount=type=secret,id=ssh_config,required=false,uid=1000,gid=1000 \
+RUN --mount=type=secret,id=ssh_config,required=false,uid=${USER_UID},gid=${USER_GID} \
     mkdir -p /home/$USERNAME/.ssh && \
     ssh-keyscan github.com >> /home/$USERNAME/.ssh/known_hosts 2>/dev/null && \
     if [ -f /run/secrets/ssh_config ] && [ -s /run/secrets/ssh_config ]; then \
