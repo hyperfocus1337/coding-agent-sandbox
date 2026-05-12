@@ -1,8 +1,9 @@
-# Override with `--build-arg BASE_IMAGE=...` (Justfile/CI pin the base devcontainer).
-ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer:latest
+# Adds Playwright (Chromium + system deps + agent CLI) on top of the python devcontainer image.
+# Override BASE_IMAGE via `--build-arg` (Justfile/CI pin the python devcontainer).
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python:latest
 FROM ${BASE_IMAGE}
 
-# Base image ends as non-root; Playwright install-deps uses sudo when not root, which fails in `docker build`.
+# Python image ends as non-root; Playwright install-deps uses sudo when not root, which fails in `docker build`.
 USER root
 
 # Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.

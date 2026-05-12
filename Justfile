@@ -3,8 +3,11 @@ GIT_DELTA_VERSION := "0.18.2"
 PNPM_COREPACK_VERSION := env("PNPM_COREPACK_VERSION", "11.0.9")
 YARN_COREPACK_VERSION := env("YARN_COREPACK_VERSION", "4.14.1")
 JUST_LSP_VERSION := env("JUST_LSP_VERSION", "0.3.4")
-IMAGE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer"
-# Extends the base devcontainer image with Playwright (Chromium + system deps).
+# Three-layer image chain: base -> python -> playwright. Each is published independently in CI.
+IMAGE_BASE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base"
+# Adds Python + uv + rust-just on top of base.
+IMAGE_PYTHON := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python"
+# Adds Playwright (Chromium + system deps) on top of python.
 IMAGE_PLAYWRIGHT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright"
 VERSION := "local"
 SSH_CONFIG_FILE := "config/.ssh/config"
@@ -13,7 +16,7 @@ SSH_CONFIG_FILE := "config/.ssh/config"
 # `container_user_password`; not stored in image history like a `--build-arg`). Omit for CI.
 SUDO_PASSWORD_FILE := "config/.sudo-password"
 
-# Base devcontainer image (tags :latest for the Playwright stage FROM).
+# Base devcontainer image (Node + CLI tooling, no Python). Tags :latest for the python stage FROM.
 build-base:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -34,22 +37,31 @@ build-base:
         --build-arg YARN_COREPACK_VERSION="{{ YARN_COREPACK_VERSION }}" \
         --build-arg JUST_LSP_VERSION="{{ JUST_LSP_VERSION }}" \
         --build-arg IMAGE_VERSION="{{ VERSION }}-$(date +%Y%m%d%H%M%S)" \
-        --tag "{{ IMAGE }}:{{ VERSION }}" \
-        --tag "{{ IMAGE }}:latest" \
-        --file Dockerfile \
+        --tag "{{ IMAGE_BASE }}:{{ VERSION }}" \
+        --tag "{{ IMAGE_BASE }}:latest" \
+        --file Dockerfile.base \
         .
 
-# Playwright layer on top of {{ IMAGE }}:latest (run after build-base or publish of :latest).
+# Python layer on top of {{ IMAGE_BASE }}:latest (run after build-base or publish of :latest).
+build-python:
+    docker build \
+        --build-arg BASE_IMAGE="{{ IMAGE_BASE }}:latest" \
+        --tag "{{ IMAGE_PYTHON }}:{{ VERSION }}" \
+        --tag "{{ IMAGE_PYTHON }}:latest" \
+        --file Dockerfile.python \
+        .
+
+# Playwright layer on top of {{ IMAGE_PYTHON }}:latest (run after build-python or publish of :latest).
 build-playwright:
     docker build \
-        --build-arg BASE_IMAGE="{{ IMAGE }}:latest" \
+        --build-arg BASE_IMAGE="{{ IMAGE_PYTHON }}:latest" \
         --tag "{{ IMAGE_PLAYWRIGHT }}:{{ VERSION }}" \
         --tag "{{ IMAGE_PLAYWRIGHT }}:latest" \
-        --file playwright \
+        --file Dockerfile.playwright \
         .
 
-# Build the base devcontainer image and the Playwright-extended image.
-build: build-base build-playwright
+# Build all three images (base -> python -> playwright).
+build: build-base build-python build-playwright
 
 up:
     devcontainer up

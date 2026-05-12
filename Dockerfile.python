@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1
+# Adds Python + uv + uv-managed CLIs (rust-just) on top of the base devcontainer image.
+# Override BASE_IMAGE via `--build-arg` (Justfile/CI pin the base devcontainer).
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:latest
+FROM ${BASE_IMAGE}
+
+# Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
+ARG USERNAME=node
+
+# Automatically set by BuildKit for multi-platform builds; used to scope apt caches per arch.
+ARG TARGETARCH
+
+# apt install must run as root; base image ends as non-root.
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-venv
+
+# UV package manager (standalone binary)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Drop back to non-root for uv tool installs (writes into $HOME/.local).
+USER $USERNAME
+
+# UV_TOOL_BIN_DIR must be set explicitly: without it, uv's default can vary by version (e.g.
+# newer uv Docker images default to /usr/local/bin which is not writable by a non-root user).
+# Base image already exports PATH="/home/$USERNAME/.local/bin:$PATH".
+ENV UV_TOOL_BIN_DIR="/home/$USERNAME/.local/bin"
+
+# Install just CLI
+RUN uv tool install rust-just

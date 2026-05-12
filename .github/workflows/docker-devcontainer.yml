@@ -5,22 +5,167 @@ on:
     branches: [main]
     tags: ["v*"]
     paths:
-      - Dockerfile
-      - playwright
+      - Dockerfile.base
+      - Dockerfile.python
+      - Dockerfile.playwright
       - config/*
       - scripts/*/*
       - .github/workflows/docker-devcontainer.yml
   pull_request:
     paths:
-      - Dockerfile
-      - playwright
+      - Dockerfile.base
+      - Dockerfile.python
+      - Dockerfile.playwright
       - config/*
       - scripts/*/*
       - .github/workflows/docker-devcontainer.yml
   workflow_dispatch:
 
 jobs:
-  build:
+  build-base:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/devcontainer-base
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Dockerfile.base uses BuildKit optional secret `ssh_config` (same as local `--secret`).
+      # Write repo secret SSH_CONFIG → file; assign via env: so multiline values are not
+      # mangled by ${{ }} shell expansion. Empty/unset → image still builds (no ~/.ssh/config).
+      - name: Write BuildKit secret files
+        env:
+          SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
+          # Optional disposable `node` password for `sudo` in the image.
+          # Create repository secret `CONTAINER_USER_PASSWORD` (Settings → Secrets → Actions), or rename here and below.
+          CONTAINER_USER_PASSWORD: ${{ secrets.CONTAINER_USER_PASSWORD }}
+        run: |
+          printf '%s' "$SSH_CONFIG" > /tmp/ssh_config
+          printf '%s' "$CONTAINER_USER_PASSWORD" > /tmp/container_user_password
+
+      - name: Build and push base
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.base
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # All variables passed here (e.g., GIT_DELTA_VERSION, PNPM_COREPACK_VERSION, YARN_COREPACK_VERSION, etc.) must be kept aligned between this workflow, the Justfile, and repository variables (Settings → Variables → Actions).
+          # If you override or update any variable value in one place, ensure corresponding updates in all locations to avoid inconsistencies.
+          build-args: |
+            TZ=UTC
+            GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
+            PNPM_COREPACK_VERSION=${{ vars.PNPM_COREPACK_VERSION }}
+            YARN_COREPACK_VERSION=${{ vars.YARN_COREPACK_VERSION }}
+            JUST_LSP_VERSION=${{ vars.JUST_LSP_VERSION }}
+          secret-files: |
+            ssh_config=/tmp/ssh_config
+            container_user_password=/tmp/container_user_password
+          cache-from: type=gha,scope=base
+          cache-to: type=gha,mode=max,scope=base
+
+  build-python:
+    needs: build-base
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/devcontainer-python
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # On non-PR builds the base image was pushed; pin BASE_IMAGE to its digest so the python
+      # layer is bound to the exact base manifest produced upstream. On pull_request the base
+      # is not pushed, so fall back to :latest from GHCR for Dockerfile syntax validation.
+      - name: Resolve python base image
+        id: pybase
+        env:
+          DIGEST: ${{ needs.build-base.outputs.digest }}
+        run: |
+          repo="ghcr.io/${{ github.repository }}/devcontainer-base"
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
+            echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=${repo}:latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push python
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.python
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ steps.pybase.outputs.base }}
+          cache-from: type=gha,scope=python
+          cache-to: type=gha,mode=max,scope=python
+
+  build-playwright:
+    needs: build-python
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,19 +191,6 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/devcontainer
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Extract metadata (Playwright)
-        id: meta_pw
-        uses: docker/metadata-action@v5
-        with:
           images: ghcr.io/${{ github.repository }}/devcontainer-playwright
           tags: |
             type=ref,event=branch
@@ -68,66 +200,28 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Dockerfile uses BuildKit optional secret `ssh_config` (same as local `--secret`).
-      # Write repo secret SSH_CONFIG → file; assign via env: so multiline values are not
-      # mangled by ${{ }} shell expansion. Empty/unset → image still builds (no ~/.ssh/config).
-      - name: Write BuildKit secret files
-        env:
-          SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
-          # Optional disposable `node` password for `sudo` in the image.
-          # Create repository secret `CONTAINER_USER_PASSWORD` (Settings → Secrets → Actions), or rename here and below.
-          CONTAINER_USER_PASSWORD: ${{ secrets.CONTAINER_USER_PASSWORD }}
-        run: |
-          printf '%s' "$SSH_CONFIG" > /tmp/ssh_config
-          printf '%s' "$CONTAINER_USER_PASSWORD" > /tmp/container_user_password
-
-      - name: Build and push
-        id: base
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # All variables passed here (e.g., GIT_DELTA_VERSION, PNPM_COREPACK_VERSION, YARN_COREPACK_VERSION, etc.) must be kept aligned between this workflow, the Justfile, and repository variables (Settings → Variables → Actions).
-          # If you override or update any variable value in one place, ensure corresponding updates in all locations to avoid inconsistencies.
-          build-args: |
-            TZ=UTC
-            GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
-            PNPM_COREPACK_VERSION=${{ vars.PNPM_COREPACK_VERSION }}
-            YARN_COREPACK_VERSION=${{ vars.YARN_COREPACK_VERSION }}
-            JUST_LSP_VERSION=${{ vars.JUST_LSP_VERSION }}
-          secret-files: |
-            ssh_config=/tmp/ssh_config
-            container_user_password=/tmp/container_user_password
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # After a non-PR build, pin BASE_IMAGE to the manifest we just pushed so this layer always matches the base.
-      # On pull_request the base image is not pushed; use :latest from GHCR so the Playwright stage still type-checks the Dockerfile.
-      - name: Resolve Playwright base image
+      # On non-PR builds pin BASE_IMAGE to the python digest from the upstream job; on PR fall back to :latest.
+      - name: Resolve playwright base image
         id: pwbase
         env:
-          DIGEST: ${{ steps.base.outputs.digest }}
+          DIGEST: ${{ needs.build-python.outputs.digest }}
         run: |
-          repo="ghcr.io/${{ github.repository }}/devcontainer"
+          repo="ghcr.io/${{ github.repository }}/devcontainer-python"
           if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
             echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
           else
             echo "base=${repo}:latest" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build and push Playwright
+      - name: Build and push playwright
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: playwright
+          file: Dockerfile.playwright
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta_pw.outputs.tags }}
-          labels: ${{ steps.meta_pw.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BASE_IMAGE=${{ steps.pwbase.outputs.base }}
           cache-from: type=gha,scope=playwright

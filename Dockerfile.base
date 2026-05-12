@@ -33,9 +33,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     tree \
     neovim \
     direnv \
-    python3 \
-    python3-pip \
-    python3-venv \
     postgresql-client
 
 # Install Starship prompt
@@ -87,9 +84,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     && apt update \
     && apt install gh -y
 
-# UV package manager (standalone binary)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
 # Install Claude Code sandbox runtime
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
@@ -140,14 +134,8 @@ RUN --mount=type=secret,id=container_user_password,required=false \
 # Drop to non-root user for runtime
 USER $USERNAME
 
-# Add UV-managed CLIs to PATH.
-# UV_TOOL_BIN_DIR must be set explicitly: without it, uv's default can vary by version (e.g.
-# newer uv Docker images default to /usr/local/bin which is not writable by a non-root user).
-ENV UV_TOOL_BIN_DIR="/home/$USERNAME/.local/bin"
+# Add ~/.local/bin to PATH (just-lsp installs here; the python image adds uv-managed tools to the same dir).
 ENV PATH="/home/$USERNAME/.local/bin:$PATH"
-
-# Install just CLI
-RUN uv tool install rust-just
 
 # Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain).
 # Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
