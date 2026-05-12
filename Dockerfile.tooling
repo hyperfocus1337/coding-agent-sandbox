@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # Adds developer + AI tooling on top of the base devcontainer image.
-# General developer tooling (git-delta, just-lsp) is installed first, then AI
-# tooling (sandbox-runtime, Claude Code, Codex, Gemini, OpenCode, Tessl, plugins).
+# General developer tooling (GitHub CLI, git-delta, just, just-lsp) is installed
+# first, then AI tooling (sandbox-runtime, Claude Code, Codex, Gemini, OpenCode,
+# Tessl, plugins).
 ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:latest
 FROM ${BASE_IMAGE}
 
@@ -40,9 +41,21 @@ RUN ARCH=$(dpkg --print-architecture) && \
     dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
     rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
+# just CLI: pre-built binary from GitHub releases (matches the just-lsp pattern;
+# avoids requiring uv/Python in this layer).
+USER $USERNAME
+ARG JUST_VERSION
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+    amd64) JUST_ARCH="x86_64-unknown-linux-musl" ;; \
+    arm64) JUST_ARCH="aarch64-unknown-linux-musl" ;; \
+    *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    wget -qO- "https://github.com/casey/just/releases/download/${JUST_VERSION}/just-${JUST_VERSION}-${JUST_ARCH}.tar.gz" \
+    | tar -xz -C /home/$USERNAME/.local/bin just
+
 # just-lsp binary from GitHub releases (pre-built; avoids compiling Rust toolchain).
 # Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
-USER $USERNAME
 ARG JUST_LSP_VERSION
 RUN ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \

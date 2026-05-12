@@ -161,6 +161,7 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ steps.toolbase.outputs.base }}
             GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
+            JUST_VERSION=${{ vars.JUST_VERSION }}
             JUST_LSP_VERSION=${{ vars.JUST_LSP_VERSION }}
           cache-from: type=gha,scope=tooling
           cache-to: type=gha,mode=max,scope=tooling
