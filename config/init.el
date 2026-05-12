@@ -25,23 +25,41 @@
 ;; Conveniently open Magit
 (global-set-key (kbd "C-x g") 'magit-status)
 
-;; Auto-refresh: pick up local commits fast via auto-revert
+;; Local file edits: revert file buffers fast (default magit-auto-revert-mode)
 (setq auto-revert-interval 2)
 
-;; Periodically fetch + refresh any open magit status buffers (every 5 min)
-(defvar my/magit-auto-fetch-interval 300
-  "Seconds between background fetches for open magit status buffers.")
+;; Refresh magit status after saving a file inside the repo
+(add-hook 'after-save-hook #'magit-after-save-refresh-status)
+
+;; Refresh visible magit status buffers when Emacs regains focus
+;; (catches commits / checkouts done in a terminal)
+(defun my/magit-refresh-visible-status ()
+  (dolist (win (window-list nil 'no-minibuf))
+    (with-current-buffer (window-buffer win)
+      (when (derived-mode-p 'magit-status-mode)
+        (magit-refresh)))))
+
+(add-function :after after-focus-change-function
+              (lambda ()
+                (when (frame-focus-state)
+                  (my/magit-refresh-visible-status))))
+
+;; Periodic background fetch for visible status buffers. Magit's process
+;; sentinel auto-refreshes the buffer when the async fetch completes.
+(defvar my/magit-auto-fetch-interval 300)
+(defvar my/magit-auto-fetch-timer nil)
 
 (defun my/magit-auto-fetch ()
-  "Fetch and refresh each visible magit-status-mode buffer."
-  (dolist (buf (buffer-list))
-    (with-current-buffer buf
+  (dolist (win (window-list nil 'no-minibuf))
+    (with-current-buffer (window-buffer win)
       (when (and (derived-mode-p 'magit-status-mode)
                  (magit-toplevel))
         (let ((magit-process-popup-time -1))
-          (magit-fetch-all-no-prune))
-        (magit-refresh)))))
+          (magit-fetch-all-no-prune))))))
 
-(run-with-timer my/magit-auto-fetch-interval
-                my/magit-auto-fetch-interval
-                #'my/magit-auto-fetch)
+(when (timerp my/magit-auto-fetch-timer)
+  (cancel-timer my/magit-auto-fetch-timer))
+(setq my/magit-auto-fetch-timer
+      (run-with-timer my/magit-auto-fetch-interval
+                      my/magit-auto-fetch-interval
+                      #'my/magit-auto-fetch))
