@@ -4,20 +4,21 @@ This directory defines a [Dev Container](https://containers.dev/) environment fo
 
 ## Contents
 
-| Path                             | Description                                                                                                                                                                                                          |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Dockerfile`                     | Image based on [`node:26-trixie`](https://github.com/nodejs/docker-node/tree/main/26/trixie). Installs development tools, Claude Code CLI, Gemini CLI, Tessl CLI, GitHub CLI, and git-delta.                         |
-| `playwright`                     | Child image on top of the devcontainer: Playwright system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`). `BASE_IMAGE` selects the base (default `…/devcontainer:latest`; CI pins digest after push). |
-| `.devcontainer/`                 | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally).                                                                                                               |
-| `config/config.fish`             | Fish shell configuration (Starship prompt, direnv hook, PATH).                                                                                                                                                       |
-| `scripts/agents/claude.sh`       | Installs Claude Code plugins and MCP servers (Context7, Tessl, GitHub).                                                                                                                                              |
-| `scripts/agents/gemini.sh`       | Gemini CLI extensions (CLI is installed in the Dockerfile; this script is commented out there).                                                                                                                      |
-| `docs/sharing-claude-history.md` | Notes for migrating Claude Code conversation history across machines or Docker volumes.                                                                                                                              |
-| `Justfile`                       | Convenience commands for building the images and common container tasks.                                                                                                                                             |
+| Path                             | Description                                                                                                                                                                                                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Dockerfile.base`                | Base image on [`node:26-trixie`](https://github.com/nodejs/docker-node/tree/main/26/trixie). Installs development tools, Claude Code CLI, Gemini CLI, Tessl CLI, GitHub CLI, git-delta, and `just-lsp` — **no Python/uv**. Consume this when you do not need Python. |
+| `Dockerfile.python`              | Child image on top of `devcontainer-base`: adds `python3` + `uv` + `rust-just`. `BASE_IMAGE` selects the base (default `…/devcontainer-base:latest`; CI pins digest after push).                                                                                     |
+| `Dockerfile.playwright`          | Child image on top of `devcontainer-python`: Playwright system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`). `BASE_IMAGE` selects the base (default `…/devcontainer-python:latest`; CI pins digest after push).                                     |
+| `.devcontainer/`                 | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally).                                                                                                                                                               |
+| `config/config.fish`             | Fish shell configuration (Starship prompt, direnv hook, PATH).                                                                                                                                                                                                       |
+| `scripts/agents/claude.sh`       | Installs Claude Code plugins and MCP servers (Context7, Tessl, GitHub).                                                                                                                                                                                              |
+| `scripts/agents/gemini.sh`       | Gemini CLI extensions (CLI is installed in `Dockerfile.base`; this script is commented out there).                                                                                                                                                                   |
+| `docs/sharing-claude-history.md` | Notes for migrating Claude Code conversation history across machines or Docker volumes.                                                                                                                                                                              |
+| `Justfile`                       | Convenience commands for building the images and common container tasks.                                                                                                                                                                                             |
 
 ## Justfile
 
-Run `just` from the **repository root** (where `Dockerfile` and `Justfile` live).
+Run `just` from the **repository root** (where `Dockerfile.base` and `Justfile` live).
 
 ### Build the images
 
@@ -25,15 +26,19 @@ Run `just` from the **repository root** (where `Dockerfile` and `Justfile` live)
 just build
 ```
 
-This runs **`build-base`** then **`build-playwright`**: it builds `Dockerfile` and the `playwright` child image. Defaults tag both `IMAGE` and `IMAGE_PLAYWRIGHT` with `VERSION` (default `local`) and `latest` — for example `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer:local` and `…/devcontainer-playwright:local`, plus `:latest` for each.
+This runs **`build-base`** → **`build-python`** → **`build-playwright`**, producing three images tagged with `VERSION` (default `local`) and `latest`:
 
-Use **`just build-base`** or **`just build-playwright`** alone when you only need one layer (for example, after pulling a published base from GHCR).
+- `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:{VERSION,latest}`
+- `…/devcontainer-python:{VERSION,latest}`
+- `…/devcontainer-playwright:{VERSION,latest}`
 
-The `playwright` Dockerfile accepts **`BASE_IMAGE`** (must match the devcontainer you extend). `just build-playwright` sets it to `IMAGE` with tag `latest` so overrides to `IMAGE` still stack locally.
+Use **`just build-base`**, **`just build-python`**, or **`just build-playwright`** alone when you only need one layer (for example, after pulling a published parent from GHCR).
 
-The base `Dockerfile` does **not** embed Corepack semver defaults; `just build` and CI pass them via build args.
+`Dockerfile.python` and `Dockerfile.playwright` accept **`BASE_IMAGE`** (must match the layer you extend). The recipes wire each child to the prior layer's `:latest` tag locally so overrides to `IMAGE_BASE`/`IMAGE_PYTHON` still stack.
 
-In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), the workflow builds and pushes **both** images to GHCR: `ghcr.io/<owner>/<repo>/devcontainer` and `…/devcontainer-playwright`, using the same metadata-driven tags (branch, PR, semver, SHA, `latest` on the default branch). After the base image is pushed, the Playwright build uses that base **digest** so the child image matches exactly. On **pull requests** the base image is not pushed, so the Playwright stage builds from **`devcontainer:latest`** on GHCR to validate the `playwright` Dockerfile (it does not layer on an unpublished PR base).
+`Dockerfile.base` does **not** embed Corepack semver defaults; `just build` and CI pass them via build args.
+
+In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), three independent jobs (`build-base`, `build-python`, `build-playwright`) each build and push their own image to GHCR with metadata-driven tags (branch, PR, semver, SHA, `latest` on the default branch). Each job is a separate runner — `devcontainer-base` is pushed and pullable the moment its job finishes, regardless of whether the downstream `python`/`playwright` jobs are still running or have failed. Downstream jobs pin **`BASE_IMAGE`** to the upstream **digest** so child images match exactly. On **pull requests** images are not pushed, so the downstream jobs fall back to the parent's `:latest` tag on GHCR for Dockerfile validation.
 
 Repository **variables** supply `GIT_DELTA_VERSION`, `PNPM_COREPACK_VERSION`, `YARN_COREPACK_VERSION`, and `JUST_LSP_VERSION` (**Settings → Secrets and variables → Actions → Variables**); keep those aligned with the Justfile defaults when you bump pins.
 
@@ -48,9 +53,10 @@ The following variables can be overridden at invocation time (see the `Justfile`
 | `PNPM_COREPACK_VERSION` | `11.0.9`                                                              | Pinned semver for `pnpm` (Corepack `prepare`)                                                                                                                        |
 | `YARN_COREPACK_VERSION` | `4.14.1`                                                              | Pinned semver for Yarn Berry (Corepack `prepare`)                                                                                                                    |
 | `JUST_LSP_VERSION`      | `0.3.4`                                                               | [just-lsp](https://github.com/terror/just-lsp) release tag; set matching **Actions variable** for CI builds                                                          |
-| `IMAGE`                 | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer`            | Registry/repository path for the base `docker build` tags                                                                                                            |
-| `IMAGE_PLAYWRIGHT`      | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright` | Registry/repository path for the Playwright child image (`playwright` Dockerfile)                                                                                    |
-| `VERSION`               | `local`                                                               | Primary image tag for **both** images (also written into `IMAGE_VERSION` for the base image stamp)                                                                   |
+| `IMAGE_BASE`            | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`       | Registry/repository path for the base image (`Dockerfile.base`)                                                                                                      |
+| `IMAGE_PYTHON`          | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python`     | Registry/repository path for the Python child image (`Dockerfile.python`)                                                                                            |
+| `IMAGE_PLAYWRIGHT`      | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright` | Registry/repository path for the Playwright child image (`Dockerfile.playwright`)                                                                                    |
+| `VERSION`               | `local`                                                               | Primary image tag for **all three** images (also written into `IMAGE_VERSION` for the base image stamp)                                                              |
 | `SUDO_PASSWORD_FILE`    | `config/.sudo-password`                                               | Optional one-line disposable password file; passed as secret `container_user_password` so it does **not** land in image history                                      |
 | `SSH_CONFIG_FILE`       | `config/.ssh/config`                                                  | If this path exists and is non-empty, it is passed as secret `ssh_config`; otherwise the build skips SSH client config (mirrors unset/empty `SSH_CONFIG` in Actions) |
 
