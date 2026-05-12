@@ -43,9 +43,12 @@ RUN ARCH=$(dpkg --print-architecture) && \
 
 # just CLI: pre-built binary from GitHub releases (matches the just-lsp pattern;
 # avoids requiring uv/Python in this layer).
+# Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
 USER $USERNAME
 ARG JUST_VERSION
-RUN ARCH=$(dpkg --print-architecture) && \
+RUN set -eu; \
+    : "${JUST_VERSION:?JUST_VERSION is required (use Justfile or docker build --build-arg; in CI, set the JUST_VERSION repository variable)}"; \
+    ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
     amd64) JUST_ARCH="x86_64-unknown-linux-musl" ;; \
     arm64) JUST_ARCH="aarch64-unknown-linux-musl" ;; \
