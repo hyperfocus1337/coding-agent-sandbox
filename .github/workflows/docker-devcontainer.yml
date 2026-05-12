@@ -6,6 +6,7 @@ on:
     tags: ["v*"]
     paths:
       - Dockerfile.base
+      - Dockerfile.tooling
       - Dockerfile.python
       - Dockerfile.playwright
       - config/*
@@ -14,6 +15,7 @@ on:
   pull_request:
     paths:
       - Dockerfile.base
+      - Dockerfile.tooling
       - Dockerfile.python
       - Dockerfile.playwright
       - config/*
@@ -82,22 +84,89 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # All variables passed here (e.g., GIT_DELTA_VERSION, PNPM_COREPACK_VERSION, YARN_COREPACK_VERSION, etc.) must be kept aligned between this workflow, the Justfile, and repository variables (Settings → Variables → Actions).
+          # All variables passed here (e.g., PNPM_COREPACK_VERSION, YARN_COREPACK_VERSION, etc.) must be kept aligned between this workflow, the Justfile, and repository variables (Settings → Variables → Actions).
           # If you override or update any variable value in one place, ensure corresponding updates in all locations to avoid inconsistencies.
+          # GIT_DELTA_VERSION and JUST_LSP_VERSION are consumed by Dockerfile.tooling, not here.
           build-args: |
             TZ=UTC
-            GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
             PNPM_COREPACK_VERSION=${{ vars.PNPM_COREPACK_VERSION }}
             YARN_COREPACK_VERSION=${{ vars.YARN_COREPACK_VERSION }}
-            JUST_LSP_VERSION=${{ vars.JUST_LSP_VERSION }}
           secret-files: |
             ssh_config=/tmp/ssh_config
             container_user_password=/tmp/container_user_password
           cache-from: type=gha,scope=base
           cache-to: type=gha,mode=max,scope=base
 
-  build-python:
+  build-tooling:
     needs: build-base
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/devcontainer-tooling
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # On non-PR builds the base image was pushed; pin BASE_IMAGE to its digest. On PR fall back to :latest.
+      - name: Resolve tooling base image
+        id: toolbase
+        env:
+          DIGEST: ${{ needs.build-base.outputs.digest }}
+        run: |
+          repo="ghcr.io/${{ github.repository }}/devcontainer-base"
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
+            echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=${repo}:latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push tooling
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.tooling
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ steps.toolbase.outputs.base }}
+            GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
+            JUST_LSP_VERSION=${{ vars.JUST_LSP_VERSION }}
+          cache-from: type=gha,scope=tooling
+          cache-to: type=gha,mode=max,scope=tooling
+
+  build-python:
+    needs: build-tooling
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -134,15 +203,15 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # On non-PR builds the base image was pushed; pin BASE_IMAGE to its digest so the python
-      # layer is bound to the exact base manifest produced upstream. On pull_request the base
-      # is not pushed, so fall back to :latest from GHCR for Dockerfile syntax validation.
+      # On non-PR builds the tooling image was pushed; pin BASE_IMAGE to its digest so the python
+      # layer is bound to the exact tooling manifest produced upstream. On pull_request the tooling
+      # image is not pushed, so fall back to :latest from GHCR for Dockerfile syntax validation.
       - name: Resolve python base image
         id: pybase
         env:
-          DIGEST: ${{ needs.build-base.outputs.digest }}
+          DIGEST: ${{ needs.build-tooling.outputs.digest }}
         run: |
-          repo="ghcr.io/${{ github.repository }}/devcontainer-base"
+          repo="ghcr.io/${{ github.repository }}/devcontainer-tooling"
           if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
             echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
           else

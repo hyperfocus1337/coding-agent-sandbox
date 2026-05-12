@@ -50,46 +50,20 @@ ENV DEVCONTAINER=true
 RUN mkdir -p /workspace \
     /home/$USERNAME/.claude \
     /home/$USERNAME/.local/share/fish \
+    /home/$USERNAME/.local/bin \
     /home/$USERNAME/.cursor-server && \
     chown -R $USERNAME:$USERNAME /workspace /home/$USERNAME/.claude /home/$USERNAME/.local \
     /home/$USERNAME/.cursor-server
 
 WORKDIR /workspaces
 
-# Git Delta tool for pretty printing git diffs
-ARG GIT_DELTA_VERSION
-ENV GIT_DELTA_VERSION="$GIT_DELTA_VERSION"
-RUN ARCH=$(dpkg --print-architecture) && \
-    wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-    sudo dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-    rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+# System scripts (emacs.sh used by the Emacs install below; future system scripts also land here).
+COPY --chown=$USERNAME:$USERNAME scripts/system/ /home/$USERNAME/scripts/system/
 
 # Install Emacs to use Magit on server
 RUN mkdir -p /home/$USERNAME/.emacs.d
 COPY --chown=$USERNAME:$USERNAME config/init.el /home/$USERNAME/.emacs.d/init.el
-COPY --chown=$USERNAME:$USERNAME scripts/system/emacs.sh /home/$USERNAME/scripts/system/emacs.sh
 RUN chmod +x /home/$USERNAME/scripts/system/emacs.sh && bash /home/$USERNAME/scripts/system/emacs.sh
-
-# Github CLI
-# https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    (type -p wget >/dev/null || (apt update && apt install wget -y)) \
-    && mkdir -p -m 755 /etc/apt/keyrings \
-    && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-    && cat $out | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-    && mkdir -p -m 755 /etc/apt/sources.list.d \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt update \
-    && apt install gh -y
-
-# Install Claude Code sandbox runtime
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/root/.npm \
-    apt-get update && apt-get install -y bubblewrap socat seccomp && \
-    npm install -g @anthropic-ai/sandbox-runtime
 
 # Install Corepack for pnpm/yarn shims. As of Node.js 25+ Corepack is no longer
 # bundled with Node (TSC vote, March 2025), so it must be installed from npm.
@@ -134,62 +108,20 @@ RUN --mount=type=secret,id=container_user_password,required=false \
 # Drop to non-root user for runtime
 USER $USERNAME
 
-# Add ~/.local/bin to PATH (just-lsp installs here; the python image adds uv-managed tools to the same dir).
-ENV PATH="/home/$USERNAME/.local/bin:$PATH"
-
-# Install just-lsp binary from GitHub releases (avoids compiling Rust toolchain).
-# Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
-ARG JUST_LSP_VERSION
-RUN mkdir -p /home/$USERNAME/.local/bin && \
-    ARCH=$(dpkg --print-architecture) && \
-    case "$ARCH" in \
-    amd64) JUST_LSP_ARCH="x86_64-unknown-linux-gnu" ;; \
-    arm64) JUST_LSP_ARCH="aarch64-unknown-linux-gnu" ;; \
-    *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
-    esac && \
-    wget -qO- "https://github.com/terror/just-lsp/releases/download/${JUST_LSP_VERSION}/just-lsp-${JUST_LSP_VERSION}-${JUST_LSP_ARCH}.tar.gz" \
-    | tar -xz -C /home/$USERNAME/.local/bin ./just-lsp
-
-# Install global npm CLIs as root.
-# NPM_CONFIG_PREFIX points to a system path so binaries land in /usr/local/share/npm-global/bin,
-# outside $HOME and unaffected by the devcontainer volume mount.
-ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
-ENV PATH="/usr/local/share/npm-global/bin:$PATH"
-
-# Install Claude Code CLI official installation script
-# https://code.claude.com/docs/en/setup
-RUN curl -fsSL https://claude.ai/install.sh | bash
-
-# Install Codex CLI
-# https://developers.openai.com/codex/cli
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g @openai/codex
-
-# Install Gemini CLI
-# https://geminicli.com/docs/get-started/installation/
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g @google/gemini-cli
-
-# Install OpenCode
-# https://opencode.ai/docs/
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g opencode-ai
-
 # Set the default editor and visual
 ENV EDITOR="nvim"
 ENV VISUAL="nvim"
 
+# Add ~/.local/bin (downstream tooling layers install here) and the npm-global bin to PATH.
+# NPM_CONFIG_PREFIX points to a system path so global npm installs land in
+# /usr/local/share/npm-global/bin, outside $HOME and unaffected by the devcontainer volume mount.
+ENV PATH="/home/$USERNAME/.local/bin:$PATH"
+ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
+ENV PATH="/usr/local/share/npm-global/bin:$PATH"
+
 # Copy user configurations
 COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish/config.fish
 COPY --chown=$USERNAME:$USERNAME config/.profile /home/$USERNAME/.profile
-
-# Git defaults (committed). Personal secrets stay out of Git; SSH client config uses
-# the BuildKit secret `ssh_config` below (never COPY gitignored paths into the graph).
-COPY --chown=$USERNAME:$USERNAME config/default.gitconfig /home/$USERNAME/.gitconfig
-
-# Copy scripts into the image
-COPY --chown=$USERNAME:$USERNAME scripts/system/ /home/$USERNAME/scripts/system/
-COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
 
 # SSH bootstrap (same logic for local and CI — no COPY of gitignored paths).
 # BuildKit secret `ssh_config` is optional (`required=false`). When the secret is
@@ -204,15 +136,6 @@ RUN --mount=type=secret,id=ssh_config,required=false,uid=${USER_UID},gid=${USER_
     cp /run/secrets/ssh_config /home/$USERNAME/.ssh/config && \
     chmod 600 /home/$USERNAME/.ssh/config; \
     fi
-
-# Install Tessl CLI
-RUN curl -fsSL https://get.tessl.io | sh
-
-# Install Claude Code plugins and MCP servers
-RUN bash /home/$USERNAME/scripts/agents/claude.sh
-
-# Install Gemini extensions
-# RUN bash /home/$USERNAME/scripts/agents/gemini.sh
 
 # Use fish as the container entrypoint (start as login shell with -l)
 ENTRYPOINT ["/usr/bin/fish", "-l"]

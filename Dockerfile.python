@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Adds Python + uv + uv-managed CLIs (rust-just) on top of the base devcontainer image.
 # Override BASE_IMAGE via `--build-arg` (Justfile/CI pin the base devcontainer).
-ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:latest
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling:latest
 FROM ${BASE_IMAGE}
 
 # Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.

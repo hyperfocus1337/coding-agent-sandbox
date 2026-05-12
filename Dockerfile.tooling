@@ -1,0 +1,100 @@
+# syntax=docker/dockerfile:1
+# Adds developer + AI tooling on top of the base devcontainer image.
+# General developer tooling (git-delta, just-lsp) is installed first, then AI
+# tooling (sandbox-runtime, Claude Code, Codex, Gemini, OpenCode, Tessl, plugins).
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:latest
+FROM ${BASE_IMAGE}
+
+# Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
+ARG USERNAME=node
+
+# Numeric uid/gid for `--mount=type=cache,uid=,gid=` below — must match the non-root user
+# so npm cache writes are owned correctly.
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+# Automatically set by BuildKit for multi-platform builds; used to scope apt caches per arch.
+ARG TARGETARCH
+
+# ===== General developer tooling =====
+
+# Github CLI (apt from custom keyring — root for apt).
+# https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    (type -p wget >/dev/null || (apt update && apt install wget -y)) \
+    && mkdir -p -m 755 /etc/apt/keyrings \
+    && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    && cat $out | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && mkdir -p -m 755 /etc/apt/sources.list.d \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && apt update \
+    && apt install gh -y
+
+# Git Delta tool for pretty printing git diffs (.deb from GitHub Releases — root for dpkg).
+ARG GIT_DELTA_VERSION
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+    dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+    rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+
+# just-lsp binary from GitHub releases (pre-built; avoids compiling Rust toolchain).
+# Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
+USER $USERNAME
+ARG JUST_LSP_VERSION
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+    amd64) JUST_LSP_ARCH="x86_64-unknown-linux-gnu" ;; \
+    arm64) JUST_LSP_ARCH="aarch64-unknown-linux-gnu" ;; \
+    *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    wget -qO- "https://github.com/terror/just-lsp/releases/download/${JUST_LSP_VERSION}/just-lsp-${JUST_LSP_VERSION}-${JUST_LSP_ARCH}.tar.gz" \
+    | tar -xz -C /home/$USERNAME/.local/bin ./just-lsp
+
+# ===== AI tooling =====
+
+# Claude Code sandbox runtime: apt sandbox deps (bubblewrap/socat/seccomp) + npm CLI.
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/root/.npm \
+    apt-get update && apt-get install -y bubblewrap socat seccomp && \
+    npm install -g @anthropic-ai/sandbox-runtime
+
+USER $USERNAME
+
+# Install Claude Code CLI official installation script
+# https://code.claude.com/docs/en/setup
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# Install Codex CLI
+# https://developers.openai.com/codex/cli
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @openai/codex
+
+# Install Gemini CLI
+# https://geminicli.com/docs/get-started/installation/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @google/gemini-cli
+
+# Install OpenCode
+# https://opencode.ai/docs/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g opencode-ai
+
+# Install Tessl CLI
+RUN curl -fsSL https://get.tessl.io | sh
+
+# Git defaults (committed). Personal secrets stay out of Git; the SSH client config secret is wired up in the base image.
+COPY --chown=$USERNAME:$USERNAME config/default.gitconfig /home/$USERNAME/.gitconfig
+
+# Agent helper scripts (claude.sh installs Claude Code plugins/MCP servers via the CLI installed above).
+COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
+
+# Install Claude Code plugins and MCP servers
+RUN bash /home/$USERNAME/scripts/agents/claude.sh
+
+# Install Gemini extensions
+# RUN bash /home/$USERNAME/scripts/agents/gemini.sh
