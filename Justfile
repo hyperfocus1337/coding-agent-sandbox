@@ -77,18 +77,30 @@ build-playwright:
 # Build all four images (base -> tooling -> python -> playwright).
 build: build-base build-tooling build-python build-playwright
 
+# Start the devcontainer.
 up:
     devcontainer up
 
+# Stop the devcontainer.
 stop:
     docker stop coding-agent-sandbox-devcontainer
 
+# Remove the devcontainer (stop and delete).
 rm:
     docker stop coding-agent-sandbox-devcontainer
     docker rm coding-agent-sandbox-devcontainer
 
+# Enter the devcontainer with a shell (using devcontainer CLI).
 enter:
     devcontainer exec fish
 
+# Enter the devcontainer with a shell (using docker exec).
 docker-enter:
     docker exec -it coding-agent-sandbox-devcontainer fish
+
+# Pull all images from GitHub Container Registry with latest tag.
+pull:
+    docker pull {{ IMAGE_BASE }}:latest
+    docker pull {{ IMAGE_TOOLING }}:latest
+    docker pull {{ IMAGE_PYTHON }}:latest
+    docker pull {{ IMAGE_PLAYWRIGHT }}:latest
