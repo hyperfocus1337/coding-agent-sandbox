@@ -69,6 +69,10 @@ RUN ARCH=$(dpkg --print-architecture) && \
     wget -qO- "https://github.com/terror/just-lsp/releases/download/${JUST_LSP_VERSION}/just-lsp-${JUST_LSP_VERSION}-${JUST_LSP_ARCH}.tar.gz" \
     | tar -xz -C /home/$USERNAME/.local/bin ./just-lsp
 
+# Prettier code formatter
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g prettier
+
 # ===== AI tooling =====
 
 # Claude Code sandbox runtime: apt sandbox deps (bubblewrap/socat/seccomp) as root,
