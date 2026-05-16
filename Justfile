@@ -90,9 +90,16 @@ init-volumes:
         fi
     done
 
+# Start using docker compose by default.
+up: up-compose
+
 # Start the devcontainer.
-up:
+up-dev:
     devcontainer up
+
+# Start the devcontainer.
+up-compose:
+    docker compose -f .devcontainer/docker-compose.yml up -d
 
 # Stop the devcontainer.
 stop:
