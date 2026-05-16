@@ -19,6 +19,7 @@ services:
       - coding-agent-sandbox-opencode-config:/home/node/.opencode
       - coding-agent-sandbox-opencode-auth:/home/node/.local/share/opencode
       - coding-agent-sandbox-cursor-state:/home/node/.cursor-server
+      - coding-agent-sandbox-vscode-state:/home/node/.vscode-server
       - coding-agent-sandbox-fish-history:/home/node/.local/share/fish
       - coding-agent-sandbox-ssh-config:/home/node/.ssh
       # Additional workspace bind mounts (local repo paths) live in
@@ -32,6 +33,8 @@ volumes:
   coding-agent-sandbox-opencode-auth:
     external: true
   coding-agent-sandbox-cursor-state:
+    external: true
+  coding-agent-sandbox-vscode-state:
     external: true
   coding-agent-sandbox-fish-history:
     external: true

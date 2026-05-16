@@ -83,7 +83,7 @@ build: build-base build-tooling build-python build-playwright
 init-volumes:
     #!/usr/bin/env bash
     set -euo pipefail
-    for v in claude-config opencode-config opencode-auth cursor-state fish-history ssh-config; do
+    for v in claude-config opencode-config opencode-auth cursor-state vscode-state fish-history ssh-config; do
         name="coding-agent-sandbox-$v"
         if ! docker volume inspect "$name" >/dev/null 2>&1; then
             docker volume create "$name"
