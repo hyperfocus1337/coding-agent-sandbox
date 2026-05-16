@@ -13,6 +13,26 @@ The split lets the same container be brought up two ways:
 - **Editor-driven** — open the repo in VS Code or Cursor → *Reopen in Container*. The IDE reads `devcontainer.json`, which points at `docker-compose.yml`.
 - **Plain Docker** — `docker compose -f .devcontainer/docker-compose.yml up -d`. No editor required; useful for headless agents, CI smoke tests, or just `docker exec` shells.
 
+## Why the split?
+
+If you're not using VS Code, Cursor, or GitHub Codespaces you can ignore `devcontainer.json` entirely — `docker-compose.yml` alone is enough. The split exists because `devcontainer.json` owns capabilities compose has no equivalent for:
+
+- Installs VS Code / Cursor extensions inside the container on attach.
+- Applies editor workspace settings (`editor.formatOnSave`, linter config, etc.) to the in-container IDE server.
+- Labels forwarded ports so they show up named in the IDE's *Ports* panel.
+- Sets the remote user the IDE connects as (`remoteUser`).
+- Runs dev-workflow lifecycle hooks: `postCreateCommand`, `postStartCommand`, `postAttachCommand`.
+- Works natively with GitHub Codespaces with zero extra config.
+- Pulls in devcontainer *features* — one-liners to add full toolchains (Node, Python, AWS CLI, …) without writing Dockerfile layers.
+
+You don't have to pick one or the other. `devcontainer.json` delegates the actual container definition to compose via `dockerComposeFile`, so compose owns infrastructure (image, volumes, networks, ports, lifetime) and `devcontainer.json` owns the developer-experience layer on top. The split keeps each file responsible for one concern: edit compose to change *what runs*, edit `devcontainer.json` to change *how the editor attaches to it*.
+
+There's also a practical lifecycle win from going through compose: a plain image-based devcontainer (the `"image": "..."` style in `devcontainer.json`, no compose) makes you delete and rebuild the container by hand every time you add a mount, since mounts are baked in at creation time. Docker Compose detects the config change on the next `up -d`, recreates the container itself, and skips the manual `docker rm` step. A plain `docker compose up -d` gets this behavior — see [Applying changes to compose config](#applying-changes-to-compose-config) for the full mechanics.
+
+If you want to add a volume without recreating the container, add it in `docker-compose.override.yml` and run `docker compose up -d` again before rerunning `devcontainer up` or reopening the editor.
+
+If you ever drop VS Code / Cursor / Codespaces from the workflow, you can delete `devcontainer.json` and keep using compose unchanged.
+
 ## `docker-compose.yml`
 
 ```yaml
@@ -121,6 +141,31 @@ just docker-enter         # docker exec into running container
 just stop
 just rm
 ```
+
+## Applying changes to compose config
+
+Mounts, env vars, ports, and image references are baked into a container at *creation* time, so `docker start` on an existing container reuses its original config and ignores anything you've edited since. The container has to be recreated for new config to take effect — and how painful that is depends on whether your devcontainer is image-based or compose-based.
+
+A plain image-based devcontainer (the `"image": "..."` style in `devcontainer.json`, no compose) makes you do the work by hand: delete the container and let the IDE rebuild it from scratch every time you add a mount. Docker Compose is smarter — it hashes the desired service config from `docker-compose.yml` + `docker-compose.override.yml`, compares it against the existing container, and if they differ it stops the old one and starts a fresh one with the new config on the next `up -d`. No manual `docker rm` step.
+
+Because this repo's `devcontainer.json` delegates to compose via `dockerComposeFile`, both `just up` and plain `docker compose up -d` get the compose behavior automatically.
+
+```bash
+# Edit docker-compose*.yml, then either:
+just up                                                     # devcontainer CLI → compose up -d
+docker compose -f .devcontainer/docker-compose.yml up -d    # plain compose
+```
+
+Compose will print `Recreating coding-agent-sandbox-devcontainer ... done` when it detects a diff. To force a recreate even when config is unchanged (e.g. after rebuilding the image):
+
+```bash
+docker compose -f .devcontainer/docker-compose.yml up -d --force-recreate
+```
+
+Caveats:
+
+- **Named volumes** survive recreation (data persists). **Anonymous volumes and the writable container layer do not** — anything written outside a mount is lost on recreate.
+- Plain `docker run` / `docker start` workflows do not get this auto-recreate behavior. There you'd `docker rm` + `docker run` again by hand. Stick to compose (directly or via `devcontainer up`) and this concern goes away.
 
 ## Adding a new mount
 
