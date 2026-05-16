@@ -27,3 +27,6 @@ USER $USERNAME
 # Land any future `uv tool install` calls in ~/.local/bin (writable by $USERNAME, already on PATH
 # from the base image). Without this, uv's default can vary by version.
 ENV UV_TOOL_BIN_DIR="/home/$USERNAME/.local/bin"
+
+# Ruff (Python linter/formatter) via uv tool install — lands in UV_TOOL_BIN_DIR set above.
+RUN uv tool install ruff

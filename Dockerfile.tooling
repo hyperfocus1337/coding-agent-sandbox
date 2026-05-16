@@ -47,6 +47,11 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     apt-get update && apt-get install -y fonts-powerline
 
+# shellcheck (shell script linter) and yamllint (YAML linter) from Debian repos.
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    apt-get update && apt-get install -y shellcheck yamllint
+
 # just CLI: pre-built binary from GitHub releases (matches the just-lsp pattern;
 # avoids requiring uv/Python in this layer).
 # Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
@@ -82,6 +87,10 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 # Markdownlint CLI v2
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g markdownlint-cli2
+
+# ESLint (JavaScript/TypeScript linter)
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g eslint
 
 # ===== AI tooling =====
 
