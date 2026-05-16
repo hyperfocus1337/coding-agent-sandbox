@@ -137,5 +137,7 @@ RUN --mount=type=secret,id=ssh_config,required=false,uid=${USER_UID},gid=${USER_
     chmod 600 /home/$USERNAME/.ssh/config; \
     fi
 
-# Use fish as the container entrypoint (start as login shell with -l)
-ENTRYPOINT ["/usr/bin/fish", "-l"]
+# Default command: fish login shell. Use CMD (not ENTRYPOINT) so devcontainer's
+# compose `command:` (e.g. `sleep infinity`) replaces it cleanly. With ENTRYPOINT,
+# the CMD would be passed as args to fish, breaking container startup.
+CMD ["/usr/bin/fish", "-l"]
