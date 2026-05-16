@@ -1,0 +1,43 @@
+name: coding-agent-sandbox
+
+services:
+  sandbox:
+    image: ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright:latest
+    container_name: coding-agent-sandbox-devcontainer
+    command: sleep infinity
+    environment:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      CLAUDE_CONFIG_DIR: /home/node/.claude
+      WORKSPACE_FOLDER: /workspaces/coding-agent-sandbox
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+      - "8976:8976"
+    volumes:
+      - ..:/workspaces/coding-agent-sandbox:cached
+      - coding-agent-sandbox-claude-config:/home/node/.claude
+      - coding-agent-sandbox-opencode-config:/home/node/.opencode
+      - coding-agent-sandbox-opencode-auth:/home/node/.local/share/opencode
+      - coding-agent-sandbox-cursor-state:/home/node/.cursor-server
+      - coding-agent-sandbox-fish-history:/home/node/.local/share/fish
+      - coding-agent-sandbox-ssh-config:/home/node/.ssh
+      # Additional workspace bind mounts (local repo paths) live in
+      # docker-compose.override.yml — gitignored and merged at runtime.
+
+volumes:
+  coding-agent-sandbox-claude-config:
+    external: true
+  coding-agent-sandbox-opencode-config:
+    external: true
+  coding-agent-sandbox-opencode-auth:
+    external: true
+  coding-agent-sandbox-cursor-state:
+    external: true
+  coding-agent-sandbox-fish-history:
+    external: true
+  coding-agent-sandbox-ssh-config:
+    external: true
+
+networks:
+  default:
+    name: coding-agent-sandbox-network

@@ -1,0 +1,36 @@
+{
+  "name": "Coding Agent Sandbox",
+  "dockerComposeFile": ["docker-compose.yml", "docker-compose.override.yml"],
+  "service": "sandbox",
+  "workspaceFolder": "/workspaces/coding-agent-sandbox",
+  "remoteUser": "node",
+  "forwardPorts": [3000, 8080, 8976],
+  "portsAttributes": {
+    "3000": {
+      "label": "Node"
+    },
+    "8080": {
+      "label": "HTTP app"
+    },
+    "8976": {
+      "label": "Wrangler CLI"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "fish",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "bash",
+            "icon": "terminal-bash"
+          },
+          "fish": {
+            "path": "fish"
+          }
+        }
+      }
+    }
+  }
+}

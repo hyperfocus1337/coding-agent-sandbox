@@ -1,4 +1,1 @@
 .envrc
-config/.ssh/config
-config/.sudo-password
-.devcontainer

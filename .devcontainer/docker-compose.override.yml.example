@@ -1,0 +1,14 @@
+# Copy this file to docker-compose.override.yml and edit the paths for your machine.
+# docker-compose.override.yml is gitignored so your local repo paths stay private.
+#
+# Compose merges this file with docker-compose.yml automatically when both sit in
+# the same directory. devcontainer.json also references both via dockerComposeFile.
+#
+# Each entry binds a host directory into /workspaces/<name> inside the container,
+# so the container can edit those sibling repos directly.
+
+services:
+  sandbox:
+    volumes:
+      - ${HOME}/Repositories/your-org/repo-a:/workspaces/repo-a:delegated
+      - ${HOME}/Repositories/your-org/repo-b:/workspaces/repo-b:delegated

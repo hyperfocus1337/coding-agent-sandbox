@@ -77,6 +77,19 @@ build-playwright:
 # Build all four images (base -> tooling -> python -> playwright).
 build: build-base build-tooling build-python build-playwright
 
+# Create the named volumes referenced by .devcontainer/docker-compose.yml (idempotent).
+# Run once on a fresh machine before `just up`; the compose file declares them
+# `external: true`, so they must exist before `devcontainer up` / `docker compose up`.
+init-volumes:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for v in claude-config opencode-config opencode-auth cursor-state fish-history ssh-config; do
+        name="coding-agent-sandbox-$v"
+        if ! docker volume inspect "$name" >/dev/null 2>&1; then
+            docker volume create "$name"
+        fi
+    done
+
 # Start the devcontainer.
 up:
     devcontainer up
