@@ -99,7 +99,7 @@ up-dev:
 
 # Start the devcontainer.
 up-compose:
-    docker compose -f .devcontainer/docker-compose.yml up -d
+    docker compose -f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml up -d
 
 # Stop the devcontainer.
 stop:
