@@ -95,6 +95,9 @@ init-volumes:
 # Start using docker compose by default.
 up: up-compose
 
+# Restart using docker compose by default.
+restart: restart-compose
+
 # Start the devcontainer.
 up-dev:
     devcontainer up
@@ -102,6 +105,10 @@ up-dev:
 # Start the devcontainer.
 up-compose:
     docker compose -f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml up -d
+
+# Restart the devcontainer.
+restart-compose:
+    docker compose -f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml restart
 
 # Stop the devcontainer.
 stop:
