@@ -90,6 +90,27 @@ RUN set -eu; \
     unzip -q "$tmp/terraform.zip" -d /home/$USERNAME/.local/bin && \
     rm -rf "$tmp"
 
+# OpenTofu from the official apt repository (Debian/Ubuntu install method).
+# https://opentofu.org/docs/intro/install/deb/
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    set -eu; \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://get.opentofu.org/opentofu.gpg -o /etc/apt/keyrings/opentofu.gpg && \
+    curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey \
+        | gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg && \
+    chmod a+r /etc/apt/keyrings/opentofu.gpg /etc/apt/keyrings/opentofu-repo.gpg && \
+    printf '%s\n%s\n' \
+        "deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" \
+        "deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" \
+        > /etc/apt/sources.list.d/opentofu.list && \
+    chmod a+r /etc/apt/sources.list.d/opentofu.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends tofu
+
+USER $USERNAME
+
 # Prettier code formatter
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g prettier

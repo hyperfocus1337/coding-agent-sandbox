@@ -26,6 +26,9 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     fish \
     man-db \
     unzip \
+    ca-certificates \
+    curl \
+    gnupg \
     gnupg2 \
     wget \
     dnsutils \
