@@ -30,3 +30,10 @@ USER ${USERNAME}
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     cd "/home/$USERNAME" && \
     npm install -g @playwright/cli@latest
+
+# CloakBrowser: stealth Chromium drop-in replacement for Playwright (CloakHQ/CloakBrowser).
+# Installed as a uv tool from PyPI with the [geoip] extra (geoip2 + socksio for proxy-IP
+# timezone/locale auto-detection). Entry points land in UV_TOOL_BIN_DIR. Library use at
+# runtime: `uv run --with 'cloakbrowser[geoip]' python ...`. Stealth Chromium binary
+# (~200MB) is fetched on first use into the per-user cloakbrowser cache, not here.
+# RUN uv tool install "cloakbrowser[geoip]"
