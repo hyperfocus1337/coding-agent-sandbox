@@ -16,5 +16,5 @@ cd /home/$USERNAME/repositories/claude-marketplace/scripts
 # Run integration script to symlink commands, skills and CLAUDE.md to ~/.claude
 REPO=/home/$USERNAME/repositories/claude-marketplace ./integration/symlink.sh
 
-# Run the claude.sh script to install plugins and MCP servers
-./plugins/claude.sh
+# Run the install.sh script to install plugins and MCP servers
+./plugins/install.sh
