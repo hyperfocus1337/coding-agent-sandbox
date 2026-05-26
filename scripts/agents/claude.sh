@@ -16,5 +16,6 @@ cd /home/$USERNAME/repositories/claude-marketplace/scripts
 # Run integration script to symlink commands, skills and CLAUDE.md to ~/.claude
 REPO=/home/$USERNAME/repositories/claude-marketplace ./integration/symlink.sh
 
+# Skip installing as Docker mounts the ~/.claude directory from the volume
 # Run the install.sh script to install plugins and MCP servers
-./plugins/install.sh
+# ./plugins/install.sh
