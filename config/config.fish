@@ -3,6 +3,9 @@ set -x VISUAL nvim
 set -x KUBE_EDITOR nvim
 alias vim nvim
 
+# Disable MCP servers originating from claude.ai
+set -x ENABLE_CLAUDEAI_MCP_SERVERS false
+
 # Add local bin directory
 fish_add_path "/home/node/.local/bin"
 
