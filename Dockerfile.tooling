@@ -19,9 +19,11 @@ ARG TARGETARCH
 
 # ===== General developer tooling =====
 
-# Github CLI (apt from custom keyring — root for apt).
-# https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
+# ----- Root: system-wide installs (apt, dpkg, vendor scripts to /usr/local) -----
 USER root
+
+# Github CLI (apt from custom keyring).
+# https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     (type -p wget >/dev/null || (apt update && apt install wget -y)) \
@@ -34,7 +36,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     && apt update \
     && apt install gh -y
 
-# Git Delta tool for pretty printing git diffs (.deb from GitHub Releases — root for dpkg).
+# Git Delta tool for pretty printing git diffs (.deb from GitHub Releases).
 ARG GIT_DELTA_VERSION
 RUN ARCH=$(dpkg --print-architecture) && \
     wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
@@ -52,10 +54,40 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     apt-get update && apt-get install -y shellcheck yamllint
 
+# OpenTofu from the official apt repository (Debian/Ubuntu install method).
+# https://opentofu.org/docs/intro/install/deb/
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    set -eu; \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://get.opentofu.org/opentofu.gpg -o /etc/apt/keyrings/opentofu.gpg && \
+    curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey \
+        | gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg && \
+    chmod a+r /etc/apt/keyrings/opentofu.gpg /etc/apt/keyrings/opentofu-repo.gpg && \
+    printf '%s\n%s\n' \
+        "deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" \
+        "deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" \
+        > /etc/apt/sources.list.d/opentofu.list && \
+    chmod a+r /etc/apt/sources.list.d/opentofu.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends tofu
+
+# Azure CLI via official Microsoft install script (apt repo set up internally).
+# https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt
+# RUN curl -fsSL 'https://azurecliprod.blob.core.windows.net/$root/deb_install.sh' | bash
+
+# AWS CLI v2 from the official AWS bundle (no apt package — vendor-recommended path).
+# https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+# RUN ARCH=$(uname -m) && \
+#     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip" -o /tmp/awscliv2.zip && \
+#     unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install && rm -rf /tmp/awscliv2.zip /tmp/aws
+
+# ----- User: user-local binaries (~/.local/bin) and npm globals -----
+USER $USERNAME
+
 # just CLI: pre-built binary from GitHub releases (matches the just-lsp pattern;
 # avoids requiring uv/Python in this layer).
 # Must be non-empty (invalid URL yields empty/wrong wget body → gzip: unexpected EOF).
-USER $USERNAME
 ARG JUST_VERSION
 RUN set -eu; \
     : "${JUST_VERSION:?JUST_VERSION is required (use Justfile or docker build --build-arg; in CI, set the JUST_VERSION repository variable)}"; \
@@ -90,43 +122,9 @@ RUN set -eu; \
     unzip -q "$tmp/terraform.zip" -d /home/$USERNAME/.local/bin && \
     rm -rf "$tmp"
 
-# Switch to root
-USER root
-
-# OpenTofu from the official apt repository (Debian/Ubuntu install method).
-# https://opentofu.org/docs/intro/install/deb/
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    set -eu; \
-    install -m 0755 -d /etc/apt/keyrings && \
-    curl -fsSL https://get.opentofu.org/opentofu.gpg -o /etc/apt/keyrings/opentofu.gpg && \
-    curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey \
-        | gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg && \
-    chmod a+r /etc/apt/keyrings/opentofu.gpg /etc/apt/keyrings/opentofu-repo.gpg && \
-    printf '%s\n%s\n' \
-        "deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" \
-        "deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" \
-        > /etc/apt/sources.list.d/opentofu.list && \
-    chmod a+r /etc/apt/sources.list.d/opentofu.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends tofu
-
-# Azure CLI via official Microsoft install script (apt repo set up internally).
-# https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt
-RUN curl -fsSL 'https://azurecliprod.blob.core.windows.net/$root/deb_install.sh' | bash
-
-# AWS CLI v2 from the official AWS bundle (no apt package — vendor-recommended path).
-# https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-RUN ARCH=$(uname -m) && \
-    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip" -o /tmp/awscliv2.zip && \
-    unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install && rm -rf /tmp/awscliv2.zip /tmp/aws
-
-# Switch to $USERNAME
-USER $USERNAME
-
 # Oracle Cloud Infrastructure (OCI) CLI via official Oracle install script.
 # https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm
-RUN bash -c "$(curl -fsSL https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
+# RUN bash -c "$(curl -fsSL https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
 
 # Prettier code formatter
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
@@ -142,16 +140,21 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 
 # ===== AI tooling =====
 
-# Claude Code sandbox runtime: apt sandbox deps (bubblewrap/socat/seccomp) as root,
-# npm CLI as $USERNAME so it writes into the user-owned npm-global prefix (matches
-# the other npm installs below; running it as root would create root-owned subdirs
-# under NPM_CONFIG_PREFIX and break subsequent user-side `npm install -g`).
+# ----- Root: sandbox runtime system deps -----
 USER root
+
+# Claude Code sandbox runtime: apt sandbox deps (bubblewrap/socat/seccomp) as root.
+# The npm CLI itself is installed below as $USERNAME so it writes into the user-owned
+# npm-global prefix (running it as root would create root-owned subdirs under
+# NPM_CONFIG_PREFIX and break subsequent user-side `npm install -g`).
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     apt-get update && apt-get install -y bubblewrap socat seccomp
 
+# ----- User: AI CLIs and agent config -----
 USER $USERNAME
+
+# Claude Code sandbox runtime (npm).
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g @anthropic-ai/sandbox-runtime
 
