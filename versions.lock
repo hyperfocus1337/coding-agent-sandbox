@@ -1,0 +1,7 @@
+# Pinned versions for binary tools installed in Dockerfile.tooling.
+# Single source of truth. Regenerate with `just lock`; edit a line to override.
+GIT_DELTA_VERSION=0.18.2
+GLAB_VERSION=1.100.0
+JUST_VERSION=1.36.0
+JUST_LSP_VERSION=0.3.4
+TERRAFORM_VERSION=1.15.3
