@@ -3,7 +3,7 @@
 Defines the dev environment for this repo, split across three files:
 
 | File                          | Owns                                                                                                                                                                                                                                                                                                        |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `docker-compose.yml`          | **Runtime container shape**: image, container name, env, ports, shared volumes, lifetime. Anything `docker compose up` needs to recreate the environment without VS Code.                                                                                                                                   |
 | `docker-compose.override.yml` | **Per-machine bind mounts** (local repo paths). Gitignored so private filesystem layouts stay out of version control. Compose auto-merges this file with `docker-compose.yml` when both sit side by side. A `docker-compose.override.yml.example` is committed as a template — copy it on a fresh checkout. |
 | `devcontainer.json`           | **Editor integration**: which compose service to attach to, where the workspace lives inside the container, plus VS Code/Cursor-only features (extensions, settings, port labels, port forwarding UI).                                                                                                      |
@@ -66,20 +66,6 @@ Key choices:
 
 A second compose service, `watchtower`, polls the registry and recreates the `sandbox` container when a newer image is pushed. It talks to the daemon over the mounted `/var/run/docker.sock`.
 
-```yaml
-watchtower:
-  image: ghcr.io/nicholas-fedor/watchtower:latest
-  restart: unless-stopped
-  environment:
-    WATCHTOWER_LABEL_ENABLE: "true" # only touch opted-in containers
-    WATCHTOWER_CLEANUP: "true" # prune the old image after update
-    WATCHTOWER_POLL_INTERVAL: "21600" # 6h
-    DOCKER_CONFIG: /config
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ../config/.watchtower-docker:/config:ro
-```
-
 ### GHCR authentication (private packages)
 
 Host `docker pull` can use `~/.docker/config.json` with `credsStore: osxkeychain` (empty `"ghcr.io": {}` entries). Watchtower runs in a Linux container and **cannot** call `docker-credential-osxkeychain`, so it needs a separate config with **inline** `auth` for `ghcr.io` only.
@@ -99,18 +85,7 @@ Key choices:
 - **Use a maintained fork, not the original.** The upstream `containrrr/watchtower` was archived in December 2025 (last release `1.7.1`, image built 2023-11). Its bundled Docker client defaults to API `1.25` and fails to negotiate against a modern daemon, so every poll errors with `client version 1.25 is too old. Minimum supported API version is 1.40` (this daemon advertises `1.40` via `docker version` → `Server.MinAPIVersion`). The old workaround was to pin `DOCKER_API_VERSION: "1.40"` and skip negotiation. Instead this stack uses [`nickfedor/watchtower`](https://github.com/nicholas-fedor/watchtower), an actively maintained drop-in fork built against a current client — it negotiates the API automatically, so no pin is needed and the env var is gone.
 - **Opt-in by label** — `WATCHTOWER_LABEL_ENABLE=true` scopes Watchtower to containers carrying `com.centurylinklabs.watchtower.enable=true`. Only `sandbox` has that label, so nothing else on the host is ever recreated. Drop the env var to watch _every_ container instead.
 
-Minimal functional setup is the image, socket mount, and GHCR auth directory; label scoping, cleanup, and interval are tuning:
-
-```yaml
-watchtower:
-  image: ghcr.io/nicholas-fedor/watchtower:latest
-  restart: unless-stopped
-  environment:
-    DOCKER_CONFIG: /config
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ../config/.watchtower-docker:/config:ro
-```
+Minimal functional setup is the image, socket mount, and GHCR auth directory; label scoping, cleanup, and interval are tuning.
 
 Watchtower comes up alongside the rest of the stack whenever you run `just up`. After `just sync-watchtower-ghcr-auth`:
 
@@ -169,7 +144,7 @@ The file must exist on disk — `devcontainer.json` references it explicitly, so
 What each field does and why it lives here rather than in compose:
 
 | Field                   | Why it stays in `devcontainer.json`                                                                                                                                                                                                                                        |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `name`                  | Display name in the VS Code / Cursor _Reopen in Container_ picker. No Docker equivalent.                                                                                                                                                                                   |
 | `dockerComposeFile`     | Tells the IDE to start the container via compose instead of `docker run`. Path is relative to this file.                                                                                                                                                                   |
 | `service`               | Which compose service to attach to. Required whenever `dockerComposeFile` is set, even if there's only one service.                                                                                                                                                        |

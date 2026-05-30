@@ -1,3 +1,4 @@
 .ssh/config
 .sudo-password
 .watchtower-docker/config.json
+.gitconfig

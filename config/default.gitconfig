@@ -1,8 +1,0 @@
-# Baseline committed for image builds. For personal settings, bind-mount a file
-# or use a Git include (e.g. ~/.gitconfig.local on the host).
-[init]
-	defaultBranch = main
-[fetch]
-	prune = true
-[pull]
-	ff = only

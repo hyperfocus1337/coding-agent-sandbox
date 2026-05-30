@@ -119,6 +119,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # config/.gitconfig is gitignored, so write it from repo variable GITCONFIG before Dockerfile.tooling
+      # COPYs it. Assign via env: to preserve multiline values. Empty/unset → builds with no Git identity.
+      - name: Write personal gitconfig
+        env:
+          GITCONFIG: ${{ vars.GITCONFIG }}
+        run: printf '%s' "$GITCONFIG" > config/.gitconfig
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
