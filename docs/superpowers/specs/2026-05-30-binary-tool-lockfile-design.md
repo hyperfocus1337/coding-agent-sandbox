@@ -132,15 +132,19 @@ root / `$USERNAME` section split.
 
 ### `scripts/versions/resolve.sh` (`just lock`)
 
-For each tool, look up the latest version by `kind`:
+For each tool, look up the latest version by `kind` (uses `curl` + `jq`):
 
-- `github` → `gh api repos/<repo>/releases/latest --jq .tag_name` (fallback: curl the GitHub
-  releases API). Strip `tag_prefix`.
-- `gitlab` → `curl .../api/v4/projects/<url-encoded repo>/releases?per_page=1` → `tag_name`.
-  Strip `tag_prefix`.
-- `hashicorp` → `curl https://checkpoint.hashicorp.com/v1/check/terraform` → `current_version`.
+- `github` → `curl https://api.github.com/repos/<repo>/releases/latest` → `.tag_name`. Strip
+  `tag_prefix`.
+- `gitlab` → `curl .../api/v4/projects/<url-encoded repo>/releases?per_page=1` → `.[0].tag_name`.
+  Strip `tag_prefix` (glab's `v`).
+- `hashicorp` → `curl https://api.releases.hashicorp.com/v1/releases/terraform/latest` →
+  `.version`. (The older `checkpoint.hashicorp.com/v1/check/terraform` endpoint is retired /
+  returns 404.)
 
-Rewrite `versions.lock` with the resolved values. No-op (no diff) when already latest.
+Rewrite `versions.lock` with the resolved values. No-op (no diff) when already latest. A
+`RESOLVE_SELFTEST=1` hook swaps in canned tags so the offline test suite can verify
+tag-prefix stripping without network.
 
 **Builds never call the resolver.** It is a manual developer/maintenance step (optionally a
 scheduled workflow later). Builds read the pinned `versions.lock`, so they remain reproducible
