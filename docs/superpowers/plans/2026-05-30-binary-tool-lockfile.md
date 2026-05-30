@@ -490,7 +490,7 @@ Expected: build succeeds; the five `install-tool` RUN steps each print `installe
 
 Run:
 ```bash
-docker run --rm tooling-test bash -lc 'git-delta --version && glab --version && just --version && just-lsp --version && terraform version'
+docker run --rm tooling-test bash -lc 'delta --version && glab --version && just --version && just-lsp --version && terraform version'
 ```
 Expected: each prints its version without error (versions match `versions.lock`).
 
