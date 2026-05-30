@@ -13,6 +13,9 @@ services:
       - "3000:3000"
       - "8080:8080"
       - "8976:8976"
+    labels:
+      # Opt this container in to Watchtower auto-updates.
+      - "com.centurylinklabs.watchtower.enable=true"
     volumes:
       - ..:/workspaces/coding-agent-sandbox:cached
       - coding-agent-sandbox-claude-config:/home/node/.claude
@@ -24,6 +27,20 @@ services:
       - coding-agent-sandbox-ssh-config:/home/node/.ssh
       # Additional workspace bind mounts (local repo paths) live in
       # docker-compose.override.yml — gitignored and merged at runtime.
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: coding-agent-sandbox-watchtower
+    restart: unless-stopped
+    environment:
+      # Only update containers explicitly labeled enable=true.
+      WATCHTOWER_LABEL_ENABLE: "true"
+      # Remove old images after pulling a newer one.
+      WATCHTOWER_CLEANUP: "true"
+      # Poll the registry every 6 hours (seconds).
+      WATCHTOWER_POLL_INTERVAL: "21600"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   coding-agent-sandbox-claude-config:
