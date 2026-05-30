@@ -40,8 +40,11 @@ services:
       WATCHTOWER_CLEANUP: "true"
       # Poll the registry every 6 hours (seconds).
       WATCHTOWER_POLL_INTERVAL: "21600"
+      # Inline registry auth (see config/.watchtower-docker/config.json).
+      DOCKER_CONFIG: /config
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ../config/.watchtower-docker:/config:ro
 
 volumes:
   coding-agent-sandbox-claude-config:

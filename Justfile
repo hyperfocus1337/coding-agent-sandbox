@@ -108,6 +108,8 @@ build: build-base build-tooling build-python build-playwright
 # Container lifecycle
 # ──────────────────────────────────────────────────────────────────────────────
 
+COMPOSE_FILES := "-f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml"
+
 # Create the named volumes referenced by .devcontainer/docker-compose.yml (idempotent).
 # Run once on a fresh machine before `just up`; the compose file declares them
 # `external: true`, so they must exist before `devcontainer up` / `docker compose up`.
@@ -133,11 +135,11 @@ up-dev:
 
 # Start the devcontainer.
 up-compose:
-    docker compose -f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml up -d
+    docker compose {{ COMPOSE_FILES }} up -d
 
 # Restart the devcontainer.
 restart-compose:
-    docker compose -f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml restart
+    docker compose {{ COMPOSE_FILES }} restart
 
 # Stop the devcontainer.
 stop:
@@ -147,6 +149,47 @@ stop:
 rm:
     docker stop {{ CONTAINER }}
     docker rm {{ CONTAINER }}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Watchtower — auto-pull private GHCR images (compose service + just update)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# --- Auth (inline config; not ~/.docker osxkeychain) ---
+WATCHTOWER_DOCKER_CONFIG := "config/.watchtower-docker"
+WATCHTOWER_DOCKER_CONFIG_FILE := WATCHTOWER_DOCKER_CONFIG + "/config.json"
+
+# Sync config from `gh`; once per machine / after token rotation.
+sync-watchtower-ghcr-auth:
+    bash scripts/watchtower/sync-ghcr-auth.sh
+
+# Fail if config missing (run sync-watchtower-ghcr-auth first).
+watchtower-auth-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    f="{{ WATCHTOWER_DOCKER_CONFIG_FILE }}"
+    if [[ ! -f "$f" ]]; then
+        echo "error: missing $f — run: just sync-watchtower-ghcr-auth" >&2
+        exit 1
+    fi
+    if ! grep -q '"ghcr.io"' "$f" || ! grep -q '"auth"' "$f"; then
+        echo "error: $f has no ghcr.io auth — run: just sync-watchtower-ghcr-auth" >&2
+        exit 1
+    fi
+
+# --- Run ---
+# Reload compose Watchtower after sync.
+restart-watchtower:
+    docker compose {{ COMPOSE_FILES }} restart watchtower
+
+# One-shot pull + recreate labeled containers.
+update: watchtower-auth-check
+    docker run --rm \
+        -e DOCKER_API_VERSION=1.44 \
+        -e DOCKER_CONFIG=/config \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v "$(pwd)/{{ WATCHTOWER_DOCKER_CONFIG }}:/config:ro" \
+        ghcr.io/nicholas-fedor/watchtower:latest \
+        --run-once --cleanup --label-enable
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Shell access

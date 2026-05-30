@@ -89,3 +89,21 @@ docker exec -u root -it coding-agent-sandbox-devcontainer passwd node
 ```
 
 For **GitHub Actions** builds, optionally add a repository secret `CONTAINER_USER_PASSWORD` (same one-line throwaway value); the workflow writes it to a BuildKit secret so the image gets an interactive `sudo` password without a `--build-arg`. Leave the secret unset to skip (typical for CI).
+
+### Watchtower (auto-updates from GHCR)
+
+The compose stack includes Watchtower for labeled containers. Private GHCR images need a **Watchtower-only** Docker config (macOS `credsStore: osxkeychain` does not work inside the Watchtower container). See [.devcontainer/README.md](.devcontainer/README.md#ghcr-authentication-private-packages) for details.
+
+```bash
+just sync-watchtower-ghcr-auth   # once per machine / after token rotation
+just watchtower-auth-check
+just up
+just update                      # one-shot pull + recreate now
+```
+
+| Recipe                      | Purpose                                                            |
+| --------------------------- | ------------------------------------------------------------------ |
+| `sync-watchtower-ghcr-auth` | Write `config/.watchtower-docker/config.json` from `gh auth token` |
+| `watchtower-auth-check`     | Fail fast if that file is missing                                  |
+| `restart-watchtower`        | Reload auth after sync                                             |
+| `update`                    | Run Watchtower once (same auth mount as compose)                   |

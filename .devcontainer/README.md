@@ -74,31 +74,52 @@ watchtower:
     WATCHTOWER_LABEL_ENABLE: "true" # only touch opted-in containers
     WATCHTOWER_CLEANUP: "true" # prune the old image after update
     WATCHTOWER_POLL_INTERVAL: "21600" # 6h
+    DOCKER_CONFIG: /config
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
+    - ../config/.watchtower-docker:/config:ro
 ```
+
+### GHCR authentication (private packages)
+
+Host `docker pull` can use `~/.docker/config.json` with `credsStore: osxkeychain` (empty `"ghcr.io": {}` entries). Watchtower runs in a Linux container and **cannot** call `docker-credential-osxkeychain`, so it needs a separate config with **inline** `auth` for `ghcr.io` only.
+
+One-time (or after PAT rotation):
+
+```bash
+just sync-watchtower-ghcr-auth   # writes config/.watchtower-docker/config.json from gh
+just watchtower-auth-check       # verify the file exists
+just restart-watchtower          # if Watchtower was already running
+```
+
+`config/.watchtower-docker/config.json` is gitignored; `config.json.example` shows the shape. Requires `gh` logged in; the token needs `read:packages` for private GHCR. If `just sync-watchtower-ghcr-auth` prints a scope warning, run `gh auth refresh -s read:packages` in a terminal (browser OAuth — do not run that inside the sync script or it looks like a hang).
 
 Key choices:
 
 - **Use a maintained fork, not the original.** The upstream `containrrr/watchtower` was archived in December 2025 (last release `1.7.1`, image built 2023-11). Its bundled Docker client defaults to API `1.25` and fails to negotiate against a modern daemon, so every poll errors with `client version 1.25 is too old. Minimum supported API version is 1.40` (this daemon advertises `1.40` via `docker version` → `Server.MinAPIVersion`). The old workaround was to pin `DOCKER_API_VERSION: "1.40"` and skip negotiation. Instead this stack uses [`nickfedor/watchtower`](https://github.com/nicholas-fedor/watchtower), an actively maintained drop-in fork built against a current client — it negotiates the API automatically, so no pin is needed and the env var is gone.
 - **Opt-in by label** — `WATCHTOWER_LABEL_ENABLE=true` scopes Watchtower to containers carrying `com.centurylinklabs.watchtower.enable=true`. Only `sandbox` has that label, so nothing else on the host is ever recreated. Drop the env var to watch _every_ container instead.
 
-Minimal functional setup is just the image plus the socket mount; label scoping, cleanup, and interval are tuning:
+Minimal functional setup is the image, socket mount, and GHCR auth directory; label scoping, cleanup, and interval are tuning:
 
 ```yaml
 watchtower:
   image: ghcr.io/nicholas-fedor/watchtower:latest
   restart: unless-stopped
+  environment:
+    DOCKER_CONFIG: /config
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
+    - ../config/.watchtower-docker:/config:ro
 ```
 
-Watchtower comes up alongside the rest of the stack whenever you run `just up`. The log and run-once operations have no Justfile wrapper of their own, so they remain direct docker commands:
+Watchtower comes up alongside the rest of the stack whenever you run `just up`. After `just sync-watchtower-ghcr-auth`:
 
 ```bash
-just up                                                            # apply config (brings the whole stack up, watchtower included)
-docker logs coding-agent-sandbox-watchtower                        # confirm scope + next run
-docker exec coding-agent-sandbox-watchtower /watchtower --run-once # update now, skip the wait
+just up                         # apply config (brings the whole stack up, watchtower included)
+just update                     # one-shot pull + recreate (needs watchtower-auth-check)
+just restart-watchtower         # reload auth after sync-watchtower-ghcr-auth
+docker logs coding-agent-sandbox-watchtower
+docker exec coding-agent-sandbox-watchtower /watchtower --run-once  # same as just update (in-container)
 ```
 
 Caveat: `sandbox` runs `command: sleep infinity`, so when Watchtower updates it the container is recreated and any attached IDE / devcontainer session drops. If that bites, remove the enable label from `sandbox` and update by hand, or widen `WATCHTOWER_POLL_INTERVAL`.

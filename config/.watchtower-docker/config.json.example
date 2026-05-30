@@ -1,0 +1,7 @@
+{
+  "auths": {
+    "ghcr.io": {
+      "auth": "BASE64_ENCODED_GITHUB_USERNAME_COLON_TOKEN"
+    }
+  }
+}
