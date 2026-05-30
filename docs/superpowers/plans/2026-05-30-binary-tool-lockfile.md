@@ -328,7 +328,7 @@ latest_tag() {
       local enc="${REPO//\//%2F}"
       curl -fsSL "https://gitlab.com/api/v4/projects/$enc/releases?per_page=1" | jq -r '.[0].tag_name' ;;
     hashicorp)
-      curl -fsSL "https://checkpoint.hashicorp.com/v1/check/terraform" | jq -r '.current_version' ;;
+      curl -fsSL "https://api.releases.hashicorp.com/v1/releases/terraform/latest" | jq -r '.version' ;;
     *)
       echo "Unknown kind '$KIND'" >&2; return 1 ;;
   esac
