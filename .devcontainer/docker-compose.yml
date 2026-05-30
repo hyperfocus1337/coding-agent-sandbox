@@ -29,13 +29,11 @@ services:
       # docker-compose.override.yml — gitignored and merged at runtime.
 
   watchtower:
-    image: containrrr/watchtower:latest
+    # Maintained fork of the archived containrrr/watchtower
+    image: ghcr.io/nicholas-fedor/watchtower:latest
     container_name: coding-agent-sandbox-watchtower
     restart: unless-stopped
     environment:
-      # containrrr/watchtower ships an old Docker client pinned to API 1.25;
-      # force a version the daemon accepts (min 1.40).
-      DOCKER_API_VERSION: "1.40"
       # Only update containers explicitly labeled enable=true.
       WATCHTOWER_LABEL_ENABLE: "true"
       # Remove old images after pulling a newer one.

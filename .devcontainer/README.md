@@ -62,6 +62,47 @@ Key choices:
 - **Named volumes declared `external: true`** — compose normally prefixes named volumes with the compose project name (e.g. `devcontainer_coding-agent-sandbox-claude-config`). `external: true` tells compose to skip the prefix and reuse a pre-existing volume of the literal name. This preserves Claude config, OpenCode auth tokens, fish history, cursor-server install, etc. across rebuilds, and silences compose's "volume already exists but was not created by Docker Compose" warning (it stamps labels on volumes it creates; pre-existing ones lack those labels). The cost: on a fresh machine the volumes must be created manually before `devcontainer up` — run `just init-volumes` from the repo root for an idempotent create-if-missing pass. `docker compose down -v` will not remove external volumes either, so deliberate teardown also goes through `docker volume rm`.
 - **`:delegated` / `:cached` / `:ro`** — macOS/Windows bind-mount performance hints (or read-only); no-op on Linux. `:cached` = host authoritative, container's view may lag; `:delegated` = container authoritative, host's view may lag; `:ro` = read-only. One-to-one with the older `consistency=cached` / `consistency=delegated` / `readonly` mount options. See the header comment in `docker-compose.override.yml` for the rationale on the per-machine binds.
 
+## Watchtower (container auto-updates)
+
+A second compose service, `watchtower`, polls the registry and recreates the `sandbox` container when a newer image is pushed. It talks to the daemon over the mounted `/var/run/docker.sock`.
+
+```yaml
+watchtower:
+  image: ghcr.io/nicholas-fedor/watchtower:latest
+  restart: unless-stopped
+  environment:
+    WATCHTOWER_LABEL_ENABLE: "true" # only touch opted-in containers
+    WATCHTOWER_CLEANUP: "true"      # prune the old image after update
+    WATCHTOWER_POLL_INTERVAL: "21600" # 6h
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+```
+
+Key choices:
+
+- **Use a maintained fork, not the original.** The upstream `containrrr/watchtower` was archived in December 2025 (last release `1.7.1`, image built 2023-11). Its bundled Docker client defaults to API `1.25` and fails to negotiate against a modern daemon, so every poll errors with `client version 1.25 is too old. Minimum supported API version is 1.40` (this daemon advertises `1.40` via `docker version` → `Server.MinAPIVersion`). The old workaround was to pin `DOCKER_API_VERSION: "1.40"` and skip negotiation. Instead this stack uses [`nickfedor/watchtower`](https://github.com/nicholas-fedor/watchtower), an actively maintained drop-in fork built against a current client — it negotiates the API automatically, so no pin is needed and the env var is gone.
+- **Opt-in by label** — `WATCHTOWER_LABEL_ENABLE=true` scopes Watchtower to containers carrying `com.centurylinklabs.watchtower.enable=true`. Only `sandbox` has that label, so nothing else on the host is ever recreated. Drop the env var to watch *every* container instead.
+
+Minimal functional setup is just the image plus the socket mount; label scoping, cleanup, and interval are tuning:
+
+```yaml
+watchtower:
+  image: ghcr.io/nicholas-fedor/watchtower:latest
+  restart: unless-stopped
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+```
+
+Watchtower comes up alongside the rest of the stack whenever you run `just up`. The log and run-once operations have no Justfile wrapper of their own, so they remain direct docker commands:
+
+```bash
+just up                                                            # apply config (brings the whole stack up, watchtower included)
+docker logs coding-agent-sandbox-watchtower                        # confirm scope + next run
+docker exec coding-agent-sandbox-watchtower /watchtower --run-once # update now, skip the wait
+```
+
+Caveat: `sandbox` runs `command: sleep infinity`, so when Watchtower updates it the container is recreated and any attached IDE / devcontainer session drops. If that bites, remove the enable label from `sandbox` and update by hand, or widen `WATCHTOWER_POLL_INTERVAL`.
+
 ## `docker-compose.override.yml`
 
 Holds bind mounts that point at host directories specific to one developer's filesystem layout (e.g. `~/Repositories/your-org/repo-a`). Gitignored.
