@@ -53,6 +53,15 @@ pull:
     docker pull {{ IMAGE_PLAYWRIGHT }}:latest
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Versions
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Resolve the latest upstream versions of the binary tools and rewrite versions.lock.
+# Manual maintenance step; review the diff and commit. Requires curl + jq.
+lock:
+    bash scripts/versions/resolve.sh
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Image builds
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -110,15 +119,6 @@ build-playwright:
 
 # Build all four images (base -> tooling -> python -> playwright).
 build: build-base build-tooling build-python build-playwright
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Versions
-# ──────────────────────────────────────────────────────────────────────────────
-
-# Resolve the latest upstream versions of the binary tools and rewrite versions.lock.
-# Manual maintenance step; review the diff and commit. Requires curl + jq.
-lock:
-    bash scripts/versions/resolve.sh
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Container lifecycle
