@@ -148,18 +148,6 @@ rm:
     docker stop {{ CONTAINER }}
     docker rm {{ CONTAINER }}
 
-# Trigger a Watchtower update pass now instead of waiting for the scheduled
-# interval. Runs a throwaway one-shot container that pulls newer images and
-# recreates labeled containers, then exits. One-shot mode does not negotiate the
-# Docker API, so DOCKER_API_VERSION is pinned. Recreating the sandbox drops any
-# attached IDE/devcontainer session.
-update:
-    docker run --rm \
-        -e DOCKER_API_VERSION=1.44 \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        ghcr.io/nicholas-fedor/watchtower:latest \
-        --run-once --cleanup --label-enable
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Shell access
 # ──────────────────────────────────────────────────────────────────────────────
