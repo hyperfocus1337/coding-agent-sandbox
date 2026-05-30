@@ -14,8 +14,8 @@ git clone https://github.com/hyperfocus1337/claude-marketplace.git /home/$USERNA
 cd /home/$USERNAME/repositories/claude-marketplace/scripts
 
 # Run integration script to symlink commands, skills and CLAUDE.md to ~/.claude
-REPO=/home/$USERNAME/repositories/claude-marketplace ./integration/symlink.sh
+REPO=/home/$USERNAME/repositories/claude-marketplace ./sync/symlink.sh
 
 # Skip installing as Docker mounts the ~/.claude directory from the volume
-# Run the install.sh script to install plugins and MCP servers
-# ./plugins/install.sh
+# Run the install.sh script to install extensions (plugins, skills or mcp servers)
+# ./extensions/install.sh
