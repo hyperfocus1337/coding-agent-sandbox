@@ -3,14 +3,14 @@
 Defines the dev environment for this repo, split across three files:
 
 | File                          | Owns                                                                                                                                                                                                                                                                                                        |
-|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `docker-compose.yml`          | **Runtime container shape**: image, container name, env, ports, shared volumes, lifetime. Anything `docker compose up` needs to recreate the environment without VS Code.                                                                                                                                   |
 | `docker-compose.override.yml` | **Per-machine bind mounts** (local repo paths). Gitignored so private filesystem layouts stay out of version control. Compose auto-merges this file with `docker-compose.yml` when both sit side by side. A `docker-compose.override.yml.example` is committed as a template — copy it on a fresh checkout. |
 | `devcontainer.json`           | **Editor integration**: which compose service to attach to, where the workspace lives inside the container, plus VS Code/Cursor-only features (extensions, settings, port labels, port forwarding UI).                                                                                                      |
 
-The split lets the same container be brought up two ways:
+The split lets the same container be brought up in two ways.
 
-- **Editor-driven** — open the repo in VS Code or Cursor → *Reopen in Container*. The IDE reads `devcontainer.json`, which points at `docker-compose.yml`.
+- **Editor-driven** — open the repo in VS Code or Cursor → _Reopen in Container_. The IDE reads `devcontainer.json`, which points at `docker-compose.yml`.
 - **Plain Docker** — `docker compose -f .devcontainer/docker-compose.yml up -d`. No editor required; useful for headless agents, CI smoke tests, or just `docker exec` shells.
 
 ## Why the split?
@@ -19,13 +19,13 @@ If you're not using VS Code, Cursor, or GitHub Codespaces you can ignore `devcon
 
 - Installs VS Code / Cursor extensions inside the container on attach.
 - Applies editor workspace settings (`editor.formatOnSave`, linter config, etc.) to the in-container IDE server.
-- Labels forwarded ports so they show up named in the IDE's *Ports* panel.
+- Labels forwarded ports so they show up named in the IDE's _Ports_ panel.
 - Sets the remote user the IDE connects as (`remoteUser`).
 - Runs dev-workflow lifecycle hooks: `postCreateCommand`, `postStartCommand`, `postAttachCommand`.
 - Works natively with GitHub Codespaces with zero extra config.
-- Pulls in devcontainer *features* — one-liners to add full toolchains (Node, Python, AWS CLI, …) without writing Dockerfile layers.
+- Pulls in devcontainer _features_ — one-liners to add full toolchains (Node, Python, AWS CLI, …) without writing Dockerfile layers.
 
-You don't have to pick one or the other. `devcontainer.json` delegates the actual container definition to compose via `dockerComposeFile`, so compose owns infrastructure (image, volumes, networks, ports, lifetime) and `devcontainer.json` owns the developer-experience layer on top. The split keeps each file responsible for one concern: edit compose to change *what runs*, edit `devcontainer.json` to change *how the editor attaches to it*.
+You don't have to pick one or the other. `devcontainer.json` delegates the actual container definition to compose via `dockerComposeFile`, so compose owns infrastructure (image, volumes, networks, ports, lifetime) and `devcontainer.json` owns the developer-experience layer on top. The split keeps each file responsible for one concern: edit compose to change _what runs_, edit `devcontainer.json` to change _how the editor attaches to it_.
 
 There's also a practical lifecycle win from going through compose: a plain image-based devcontainer (the `"image": "..."` style in `devcontainer.json`, no compose) makes you delete and rebuild the container by hand every time you add a mount, since mounts are baked in at creation time. Docker Compose detects the config change on the next `up -d`, recreates the container itself, and skips the manual `docker rm` step. A plain `docker compose up -d` gets this behavior — see [Applying changes to compose config](#applying-changes-to-compose-config) for the full mechanics.
 
@@ -43,8 +43,8 @@ services:
     container_name: coding-agent-sandbox-devcontainer
     command: sleep infinity
     environment: { … }
-    ports: [ … ]
-    volumes: [ … ]
+    ports: […]
+    volumes: […]
 volumes:
   coding-agent-sandbox-*:
     external: true
@@ -57,7 +57,7 @@ Key choices:
 
 - **`command: sleep infinity`** — keeps PID 1 alive so the editor (or `docker exec`) has something to attach to. The base image declares its login shell via `CMD ["/usr/bin/fish", "-l"]` rather than `ENTRYPOINT`, so this `command:` cleanly replaces the default. (With `ENTRYPOINT`, `sleep infinity` would be appended as args — `fish -l sleep infinity` — and the container would exit 127.)
 - **`container_name`** — pins the container to `coding-agent-sandbox-devcontainer` so the `Justfile` recipes (`just stop`, `just rm`, `just docker-enter`) keep working. Without it, compose would generate a name like `devcontainer-sandbox-1`.
-- **Top-level `name:` and `networks.default.name:`** — compose defaults the *project name* to the directory the compose file sits in (here `.devcontainer/` → `devcontainer`) and prefixes every auto-named resource with it (e.g. network `devcontainer_default`). Pinning `name: coding-agent-sandbox` at the top of the compose file and `networks.default.name: coding-agent-sandbox-network` under the network block strips that prefix from every resource the file owns. Combined with `container_name` on the service and `external: true` on each named volume (which makes compose use the literal key as the volume name instead of prefixing it), nothing in this stack carries a `devcontainer_` prefix.
+- **Top-level `name:` and `networks.default.name:`** — compose defaults the _project name_ to the directory the compose file sits in (here `.devcontainer/` → `devcontainer`) and prefixes every auto-named resource with it (e.g. network `devcontainer_default`). Pinning `name: coding-agent-sandbox` at the top of the compose file and `networks.default.name: coding-agent-sandbox-network` under the network block strips that prefix from every resource the file owns. Combined with `container_name` on the service and `external: true` on each named volume (which makes compose use the literal key as the volume name instead of prefixing it), nothing in this stack carries a `devcontainer_` prefix.
 - **Workspace bind `..:/workspaces/coding-agent-sandbox:cached`** — when the devcontainer CLI starts a container from an `image:` field it auto-binds the workspace. In `dockerComposeFile` mode it does **not** — the bind must be declared explicitly here, otherwise the in-container workspace folder is empty.
 - **Named volumes declared `external: true`** — compose normally prefixes named volumes with the compose project name (e.g. `devcontainer_coding-agent-sandbox-claude-config`). `external: true` tells compose to skip the prefix and reuse a pre-existing volume of the literal name. This preserves Claude config, OpenCode auth tokens, fish history, cursor-server install, etc. across rebuilds, and silences compose's "volume already exists but was not created by Docker Compose" warning (it stamps labels on volumes it creates; pre-existing ones lack those labels). The cost: on a fresh machine the volumes must be created manually before `devcontainer up` — run `just init-volumes` from the repo root for an idempotent create-if-missing pass. `docker compose down -v` will not remove external volumes either, so deliberate teardown also goes through `docker volume rm`.
 - **`:delegated` / `:cached` / `:ro`** — macOS/Windows bind-mount performance hints (or read-only); no-op on Linux. `:cached` = host authoritative, container's view may lag; `:delegated` = container authoritative, host's view may lag; `:ro` = read-only. One-to-one with the older `consistency=cached` / `consistency=delegated` / `readonly` mount options. See the header comment in `docker-compose.override.yml` for the rationale on the per-machine binds.
@@ -72,7 +72,7 @@ watchtower:
   restart: unless-stopped
   environment:
     WATCHTOWER_LABEL_ENABLE: "true" # only touch opted-in containers
-    WATCHTOWER_CLEANUP: "true"      # prune the old image after update
+    WATCHTOWER_CLEANUP: "true" # prune the old image after update
     WATCHTOWER_POLL_INTERVAL: "21600" # 6h
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -81,7 +81,7 @@ watchtower:
 Key choices:
 
 - **Use a maintained fork, not the original.** The upstream `containrrr/watchtower` was archived in December 2025 (last release `1.7.1`, image built 2023-11). Its bundled Docker client defaults to API `1.25` and fails to negotiate against a modern daemon, so every poll errors with `client version 1.25 is too old. Minimum supported API version is 1.40` (this daemon advertises `1.40` via `docker version` → `Server.MinAPIVersion`). The old workaround was to pin `DOCKER_API_VERSION: "1.40"` and skip negotiation. Instead this stack uses [`nickfedor/watchtower`](https://github.com/nicholas-fedor/watchtower), an actively maintained drop-in fork built against a current client — it negotiates the API automatically, so no pin is needed and the env var is gone.
-- **Opt-in by label** — `WATCHTOWER_LABEL_ENABLE=true` scopes Watchtower to containers carrying `com.centurylinklabs.watchtower.enable=true`. Only `sandbox` has that label, so nothing else on the host is ever recreated. Drop the env var to watch *every* container instead.
+- **Opt-in by label** — `WATCHTOWER_LABEL_ENABLE=true` scopes Watchtower to containers carrying `com.centurylinklabs.watchtower.enable=true`. Only `sandbox` has that label, so nothing else on the host is ever recreated. Drop the env var to watch _every_ container instead.
 
 Minimal functional setup is just the image plus the socket mount; label scoping, cleanup, and interval are tuning:
 
@@ -107,7 +107,7 @@ Caveat: `sandbox` runs `command: sleep infinity`, so when Watchtower updates it 
 
 Holds bind mounts that point at host directories specific to one developer's filesystem layout (e.g. `~/Repositories/your-org/repo-a`). Gitignored.
 
-Compose merges this file with `docker-compose.yml` automatically when both live in the same directory. `devcontainer.json` lists both via `dockerComposeFile`, so the editor sees the merged result too. The `volumes:` list under `services.sandbox` is *appended*, not replaced — committed `docker-compose.yml` keeps owning the shared mounts (workspace bind, named volumes, the SSH key), and the override only adds extra bind mounts on top.
+Compose merges this file with `docker-compose.yml` automatically when both live in the same directory. `devcontainer.json` lists both via `dockerComposeFile`, so the editor sees the merged result too. The `volumes:` list under `services.sandbox` is _appended_, not replaced — committed `docker-compose.yml` keeps owning the shared mounts (workspace bind, named volumes, the SSH key), and the override only adds extra bind mounts on top.
 
 Fresh checkout:
 
@@ -144,8 +144,8 @@ The file must exist on disk — `devcontainer.json` references it explicitly, so
 What each field does and why it lives here rather than in compose:
 
 | Field                   | Why it stays in `devcontainer.json`                                                                                                                                                                                                                                        |
-|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`                  | Display name in the VS Code / Cursor *Reopen in Container* picker. No Docker equivalent.                                                                                                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                  | Display name in the VS Code / Cursor _Reopen in Container_ picker. No Docker equivalent.                                                                                                                                                                                   |
 | `dockerComposeFile`     | Tells the IDE to start the container via compose instead of `docker run`. Path is relative to this file.                                                                                                                                                                   |
 | `service`               | Which compose service to attach to. Required whenever `dockerComposeFile` is set, even if there's only one service.                                                                                                                                                        |
 | `workspaceFolder`       | Where the IDE opens its file explorer inside the container. Must match the in-container path of the workspace bind in compose. Compose itself doesn't know which mount is "the workspace" — this field tells the IDE.                                                      |
@@ -185,7 +185,7 @@ just rm
 
 ## Applying changes to compose config
 
-Mounts, env vars, ports, and image references are baked into a container at *creation* time, so `docker start` on an existing container reuses its original config and ignores anything you've edited since. The container has to be recreated for new config to take effect — and how painful that is depends on whether your devcontainer is image-based or compose-based.
+Mounts, env vars, ports, and image references are baked into a container at _creation_ time, so `docker start` on an existing container reuses its original config and ignores anything you've edited since. The container has to be recreated for new config to take effect — and how painful that is depends on whether your devcontainer is image-based or compose-based.
 
 A plain image-based devcontainer (the `"image": "..."` style in `devcontainer.json`, no compose) makes you do the work by hand: delete the container and let the IDE rebuild it from scratch every time you add a mount. Docker Compose is smarter — it hashes the desired service config from `docker-compose.yml` + `docker-compose.override.yml`, compares it against the existing container, and if they differ it stops the old one and starts a fresh one with the new config on the next `up -d`. No manual `docker rm` step.
 
@@ -213,7 +213,7 @@ Caveats:
 Decide which file based on whether the mount is shared or per-machine:
 
 - **Shared** (same on every developer's machine — named volumes, the workspace bind, an SSH key at a canonical path) → `docker-compose.yml`.
-- **Per-machine** (a host path that depends on where *you* keep your repos) → `docker-compose.override.yml`.
+- **Per-machine** (a host path that depends on where _you_ keep your repos) → `docker-compose.override.yml`.
 
 Then:
 
