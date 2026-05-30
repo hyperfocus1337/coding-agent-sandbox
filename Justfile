@@ -1,11 +1,6 @@
 TZ := env("TZ", "Europe/Amsterdam")
-GIT_DELTA_VERSION := "0.18.2"
-GLAB_VERSION := env("GLAB_VERSION", "1.100.0")
 PNPM_COREPACK_VERSION := env("PNPM_COREPACK_VERSION", "11.0.9")
 YARN_COREPACK_VERSION := env("YARN_COREPACK_VERSION", "4.14.1")
-JUST_VERSION := env("JUST_VERSION", "1.36.0")
-JUST_LSP_VERSION := env("JUST_LSP_VERSION", "0.3.4")
-TERRAFORM_VERSION := env("TERRAFORM_VERSION", "1.15.3")
 # Four-layer image chain: base -> tooling -> python -> playwright. Each is published independently in CI.
 IMAGE_BASE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base"
 # Adds developer + AI tooling (git-delta, just-lsp, sandbox-runtime, Claude/Codex/Gemini/OpenCode/Tessl) on top of base.
@@ -50,15 +45,15 @@ build-base:
 build-tooling:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_BASE }}:latest" \
-        --build-arg GIT_DELTA_VERSION="{{ GIT_DELTA_VERSION }}" \
-        --build-arg GLAB_VERSION="{{ GLAB_VERSION }}" \
-        --build-arg JUST_VERSION="{{ JUST_VERSION }}" \
-        --build-arg JUST_LSP_VERSION="{{ JUST_LSP_VERSION }}" \
-        --build-arg TERRAFORM_VERSION="{{ TERRAFORM_VERSION }}" \
         --tag "{{ IMAGE_TOOLING }}:{{ VERSION }}" \
         --tag "{{ IMAGE_TOOLING }}:latest" \
         --file Dockerfile.tooling \
         .
+
+# Resolve the latest upstream versions of the binary tools and rewrite versions.lock.
+# Manual maintenance step; review the diff and commit. Requires curl + jq.
+lock:
+    bash scripts/versions/resolve.sh
 
 # Python layer on top of {{ IMAGE_TOOLING }}:latest (run after build-tooling or publish of :latest).
 build-python:
