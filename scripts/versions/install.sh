@@ -1,75 +1,66 @@
 #!/usr/bin/env bash
-# install.sh <name>            download + install a tool from the manifest at its pinned version
-# install.sh --print-url <name>  print the resolved download URL and exit (offline; for tests)
 #
-# Version comes from versions.lock (override path via VERSIONS_LOCK).
-# Arch comes from `dpkg --print-architecture` (override via ARCH_OVERRIDE for tests).
+# install.sh <tool> — download and install one binary tool at its pinned version.
+#
+# Looks up the pinned version in versions.lock and the download recipe (source
+# URL, install method, target arch) in manifest.sh, then fetches and installs it.
+# Dockerfile.tooling calls this as `install-tool <tool>` (a symlink on PATH).
+#
 set -euo pipefail
 
-# Resolve this script's real directory even when invoked via a symlink (e.g. /usr/local/bin/install-tool).
-SOURCE="${BASH_SOURCE[0]}"
-while [ -L "$SOURCE" ]; do
-  target="$(readlink "$SOURCE")"
-  case "$target" in
-    /*) SOURCE="$target" ;;
-    *)  SOURCE="$(dirname "$SOURCE")/$target" ;;
+# ── Locate this script ────────────────────────────────────────────────────────
+# `install-tool` is a symlink in /usr/local/bin; follow it to the real directory
+# so we can source manifest.sh and versions.lock, which sit beside this script.
+source_path="${BASH_SOURCE[0]}"
+while [ -L "$source_path" ]; do
+  link="$(readlink "$source_path")"
+  case "$link" in
+    /*) source_path="$link" ;;                 # absolute symlink target
+    *)  source_path="$(dirname "$source_path")/$link" ;;  # relative to the link
   esac
 done
-SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+script_dir="$(cd "$(dirname "$source_path")" && pwd)"
 
-print_url_only=0
-if [ "${1:-}" = "--print-url" ]; then print_url_only=1; shift; fi
-name="${1:?usage: install.sh [--print-url] <tool-name>}"
+# ── Load inputs ───────────────────────────────────────────────────────────────
+tool="${1:?usage: install.sh <tool>}"
+. "$script_dir/versions.lock"   # pinned versions, e.g. GIT_DELTA_VERSION=0.18.2
+. "$script_dir/manifest.sh"     # provides tool_meta / tool_arch
 
-# Default: versions.lock colocated with these scripts, as installed in the image via Dockerfile COPY
-# (e.g. /usr/local/share/tool-install/versions.lock). Tests and CI supply the repo-root copy via
-# the VERSIONS_LOCK env var instead of relying on this default.
-LOCK_FILE="${VERSIONS_LOCK:-$SCRIPT_DIR/versions.lock}"
-# shellcheck disable=SC1090
-. "$LOCK_FILE"
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR/manifest.sh"
-
-tool_meta "$name"
+# ── Resolve version, arch, and download URL ───────────────────────────────────
+tool_meta "$tool"               # sets METHOD, URL_TMPL, VERSION_VAR, DEST, MEMBER
 
 version="${!VERSION_VAR:-}"
-: "${version:?$VERSION_VAR is empty in $LOCK_FILE (set it or run 'just lock')}"
+: "${version:?$VERSION_VAR is empty in versions.lock (run 'just lock')}"
 
-dpkg_arch="${ARCH_OVERRIDE:-$(dpkg --print-architecture)}"
-arch="$(tool_arch "$name" "$dpkg_arch")"
-[ -n "$arch" ] || { echo "Unsupported architecture '$dpkg_arch' for $name" >&2; exit 1; }
+arch="$(tool_arch "$tool" "$(dpkg --print-architecture)")"
+[ -n "$arch" ] || { echo "Unsupported architecture for $tool" >&2; exit 1; }
 
-# Expand the template (only ${VERSION} and ${ARCH} are substituted; no eval).
-url="${URL_TMPL//\$\{VERSION\}/$version}"
-url="${url//\$\{ARCH\}/$arch}"
+url="${URL_TMPL//\{VERSION\}/$version}"   # fill the {VERSION} / {ARCH}
+url="${url//\{ARCH\}/$arch}"              # placeholders in the manifest template
 
-if [ "$print_url_only" -eq 1 ]; then
-  echo "$url"
-  exit 0
-fi
-
+# ── Download into a scratch dir (auto-removed on exit) ────────────────────────
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-file="$tmp/download"
+wget -qO "$tmp/pkg" "$url"
+[ -s "$tmp/pkg" ] || { echo "Empty download from $url" >&2; exit 1; }
 
-wget -qO "$file" "$url"
-[ -s "$file" ] || { echo "Empty download from $url" >&2; exit 1; }
-
+# ── Install by method ─────────────────────────────────────────────────────────
+# deb: system package (root). tar/zip: extract one binary into ~/.local/bin.
 case "$METHOD" in
   deb)
-    dpkg -i "$file"
+    dpkg -i "$tmp/pkg"
     ;;
   tar)
     mkdir -p "$DEST"
-    # shellcheck disable=SC2086
-    tar -xzf "$file" -C "$DEST" $MEMBER
+    tar -xzf "$tmp/pkg" -C "$DEST" "$MEMBER"
     ;;
   zip)
     mkdir -p "$DEST"
-    unzip -q "$file" "$MEMBER" -d "$DEST"
+    unzip -q "$tmp/pkg" "$MEMBER" -d "$DEST"
     ;;
   *)
-    echo "Unknown install method '$METHOD' for $name" >&2; exit 1 ;;
+    echo "Unknown install method '$METHOD' for $tool" >&2; exit 1
+    ;;
 esac
 
-echo "installed $name $version ($arch)"
+echo "installed $tool $version ($arch)"
