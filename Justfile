@@ -1,3 +1,7 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Variables
+# ──────────────────────────────────────────────────────────────────────────────
+
 TZ := env("TZ", "Europe/Amsterdam")
 PNPM_COREPACK_VERSION := env("PNPM_COREPACK_VERSION", "11.0.9")
 YARN_COREPACK_VERSION := env("YARN_COREPACK_VERSION", "4.14.1")
@@ -15,6 +19,40 @@ SSH_CONFIG_FILE := "config/.ssh/config"
 # Optional: one-line file with a disposable Unix password for `$USERNAME` (BuildKit secret
 # `container_user_password`; not stored in image history like a `--build-arg`). Omit for CI.
 SUDO_PASSWORD_FILE := "config/.sudo-password"
+
+# Running devcontainer container name and the marketplace clone inside it.
+CONTAINER := "coding-agent-sandbox-devcontainer"
+MARKETPLACE_REPO := "/home/node/repositories/claude-marketplace"
+# Local (host) clone of claude-marketplace used by `sync-locally`.
+MARKETPLACE_REPO_LOCAL := env("MARKETPLACE_REPO_LOCAL", env("HOME") / "Repositories/anthropic/claude-marketplace")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Registry & sync
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Pull all images from GitHub Container Registry with latest tag.
+pull:
+    docker pull {{ IMAGE_BASE }}:latest
+    docker pull {{ IMAGE_TOOLING }}:latest
+    docker pull {{ IMAGE_PYTHON }}:latest
+    docker pull {{ IMAGE_PLAYWRIGHT }}:latest
+
+# Sync the claude-marketplace integration. Defaults to the local (host) clone.
+sync: sync-locally
+
+# Pull the local (host) claude-marketplace clone and re-run the symlink
+# integration to refresh commands, skills and CLAUDE.md in ~/.claude.
+sync-locally:
+    cd {{ MARKETPLACE_REPO_LOCAL }} && git pull && REPO={{ MARKETPLACE_REPO_LOCAL }} ./scripts/integration/symlink.sh
+
+# Pull the latest claude-marketplace inside the running container and re-run the
+# symlink integration to refresh commands, skills and CLAUDE.md in ~/.claude.
+sync-marketplace:
+    docker exec {{ CONTAINER }} bash -c 'cd {{ MARKETPLACE_REPO }} && git pull && REPO={{ MARKETPLACE_REPO }} ./scripts/integration/symlink.sh'
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Image builds
+# ──────────────────────────────────────────────────────────────────────────────
 
 # Base devcontainer image (Node + OS apt packages + shell/identity, no developer tooling).
 # Tags :latest for the tooling stage FROM.
@@ -50,11 +88,6 @@ build-tooling:
         --file Dockerfile.tooling \
         .
 
-# Resolve the latest upstream versions of the binary tools and rewrite versions.lock.
-# Manual maintenance step; review the diff and commit. Requires curl + jq.
-lock:
-    bash scripts/versions/resolve.sh
-
 # Python layer on top of {{ IMAGE_TOOLING }}:latest (run after build-tooling or publish of :latest).
 build-python:
     docker build \
@@ -75,6 +108,19 @@ build-playwright:
 
 # Build all four images (base -> tooling -> python -> playwright).
 build: build-base build-tooling build-python build-playwright
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Versions
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Resolve the latest upstream versions of the binary tools and rewrite versions.lock.
+# Manual maintenance step; review the diff and commit. Requires curl + jq.
+lock:
+    bash scripts/versions/resolve.sh
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Container lifecycle
+# ──────────────────────────────────────────────────────────────────────────────
 
 # Create the named volumes referenced by .devcontainer/docker-compose.yml (idempotent).
 # Run once on a fresh machine before `just up`; the compose file declares them
@@ -109,12 +155,16 @@ restart-compose:
 
 # Stop the devcontainer.
 stop:
-    docker stop coding-agent-sandbox-devcontainer
+    docker stop {{ CONTAINER }}
 
 # Remove the devcontainer (stop and delete).
 rm:
-    docker stop coding-agent-sandbox-devcontainer
-    docker rm coding-agent-sandbox-devcontainer
+    docker stop {{ CONTAINER }}
+    docker rm {{ CONTAINER }}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Shell access
+# ──────────────────────────────────────────────────────────────────────────────
 
 # Enter the devcontainer with a shell (using devcontainer CLI).
 enter:
@@ -122,11 +172,4 @@ enter:
 
 # Enter the devcontainer with a shell (using docker exec).
 docker-enter:
-    docker exec -it coding-agent-sandbox-devcontainer fish
-
-# Pull all images from GitHub Container Registry with latest tag.
-pull:
-    docker pull {{ IMAGE_BASE }}:latest
-    docker pull {{ IMAGE_TOOLING }}:latest
-    docker pull {{ IMAGE_PYTHON }}:latest
-    docker pull {{ IMAGE_PLAYWRIGHT }}:latest
+    docker exec -it {{ CONTAINER }} fish
