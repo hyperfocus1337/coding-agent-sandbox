@@ -84,9 +84,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # All variables passed here (e.g., PNPM_COREPACK_VERSION, YARN_COREPACK_VERSION, etc.) must be kept aligned between this workflow, the Justfile, and repository variables (Settings → Variables → Actions).
-          # If you override or update any variable value in one place, ensure corresponding updates in all locations to avoid inconsistencies.
-          # GIT_DELTA_VERSION and JUST_LSP_VERSION are consumed by Dockerfile.tooling, not here.
           build-args: |
             TZ=UTC
             PNPM_COREPACK_VERSION=${{ vars.PNPM_COREPACK_VERSION }}
@@ -160,10 +157,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BASE_IMAGE=${{ steps.toolbase.outputs.base }}
-            GIT_DELTA_VERSION=${{ vars.GIT_DELTA_VERSION }}
-            JUST_VERSION=${{ vars.JUST_VERSION }}
-            JUST_LSP_VERSION=${{ vars.JUST_LSP_VERSION }}
-            TERRAFORM_VERSION=${{ vars.TERRAFORM_VERSION }}
           cache-from: type=gha,scope=tooling
           cache-to: type=gha,mode=max,scope=tooling
 
