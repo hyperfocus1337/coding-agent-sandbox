@@ -15,19 +15,19 @@ source_path="${BASH_SOURCE[0]}"
 while [ -L "$source_path" ]; do
   link="$(readlink "$source_path")"
   case "$link" in
-    /*) source_path="$link" ;;                 # absolute symlink target
-    *)  source_path="$(dirname "$source_path")/$link" ;;  # relative to the link
+    /*) source_path="$link" ;; # absolute symlink target
+    *)  source_path="$(dirname "$source_path")/$link" ;; # relative to the link
   esac
 done
 script_dir="$(cd "$(dirname "$source_path")" && pwd)"
 
 # ── Load inputs ───────────────────────────────────────────────────────────────
 tool="${1:?usage: install.sh <tool>}"
-. "$script_dir/versions.lock"   # pinned versions, e.g. GIT_DELTA_VERSION=0.18.2
-. "$script_dir/manifest.sh"     # provides tool_meta / tool_arch
+. "$script_dir/versions.lock" # pinned versions, e.g. GIT_DELTA_VERSION=0.18.2
+. "$script_dir/manifest.sh" # provides tool_meta / tool_arch
 
 # ── Resolve version, arch, and download URL ───────────────────────────────────
-tool_meta "$tool"               # sets METHOD, URL_TMPL, VERSION_VAR, DEST, MEMBER
+tool_meta "$tool" # sets METHOD, URL_TMPL, VERSION_VAR, DEST, MEMBER
 
 version="${!VERSION_VAR:-}"
 : "${version:?$VERSION_VAR is empty in versions.lock (run 'just lock')}"
@@ -35,8 +35,8 @@ version="${!VERSION_VAR:-}"
 arch="$(tool_arch "$tool" "$(dpkg --print-architecture)")"
 [ -n "$arch" ] || { echo "Unsupported architecture for $tool" >&2; exit 1; }
 
-url="${URL_TMPL//\{VERSION\}/$version}"   # fill the {VERSION} / {ARCH}
-url="${url//\{ARCH\}/$arch}"              # placeholders in the manifest template
+url="${URL_TMPL//\{VERSION\}/$version}" # fill the {VERSION} / {ARCH}
+url="${url//\{ARCH\}/$arch}" # placeholders in the manifest template
 
 # ── Download into a scratch dir (auto-removed on exit) ────────────────────────
 tmp="$(mktemp -d)"

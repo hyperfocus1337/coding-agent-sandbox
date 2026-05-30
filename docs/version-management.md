@@ -1,33 +1,48 @@
 # Binary tool version management
 
-The binary CLI tools installed into the tooling image (git-delta, glab, just, just-lsp, terraform) are version-pinned in one place and installed by a shared helper, so a tool's version lives in a single file and its download logic is not duplicated per tool.
+Five CLI tools in the tooling image come as prebuilt release downloads rather than apt packages: **git-delta, glab, just, just-lsp, terraform**. This describes how their versions are pinned and how they get installed.
 
-## Pieces
+## The idea
 
-| File                           | Role                                                                                                              |
-|--------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| `versions.lock` (repo root)    | Single source of truth: one `KEY=value` pinned version per tool.                                                  |
-| `scripts/versions/manifest.sh` | Static recipe per tool: source API, download URL template, install method, target-arch mapping.                   |
-| `scripts/versions/install.sh`  | `install-tool <tool>` — downloads and installs one tool at its pinned version (called from `Dockerfile.tooling`). |
-| `scripts/versions/resolve.sh`  | `just lock` — refreshes `versions.lock` with the latest upstream releases.                                        |
+Each tool needs two things: a **version** (which release to grab) and a **recipe** (where to download it and how to install it). We keep those separate:
 
-## How a build installs a tool
+- The version of every tool lives in one file, `versions.lock`. Change a version in exactly one place.
+- The recipe for every tool lives in one file, `manifest.sh`. One small installer script reads both and does the work, so there is no per-tool download code copied around.
 
-`Dockerfile.tooling` copies `scripts/versions/` and `versions.lock` into the image, symlinks `install.sh` to `/usr/local/bin/install-tool`, then runs e.g.:
+Builds only ever read the pinned `versions.lock` (they never call a release API), so an image rebuilt from the same commit installs the same versions.
+
+## Files
+
+| File                           | What it holds                                                                                                                                                              |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `versions.lock` (repo root)    | The pinned version of each tool, one `KEY=value` line (e.g. `JUST_VERSION=1.36.0`). The single source of truth.                                                            |
+| `scripts/versions/manifest.sh` | The per-tool recipe: where to fetch it (`KIND`/`REPO`), the download URL template, the install method (`deb`/`tar`/`zip`), and the arch name mapping. Data only, no logic. |
+| `scripts/versions/install.sh`  | The installer. `install-tool <tool>` downloads and installs one tool at its pinned version. Run during the image build.                                                    |
+| `scripts/versions/resolve.sh`  | The updater. `just lock` rewrites `versions.lock` with the latest upstream releases. Run by hand, never during a build.                                                    |
+
+## How an install happens
+
+`Dockerfile.tooling` copies `scripts/versions/` and `versions.lock` into the image and exposes the installer on `PATH` as `install-tool`. Each tool is then one line, e.g.:
 
 ```dockerfile
 RUN install-tool git-delta
 ```
 
-`install.sh` reads the pinned version from `versions.lock`, looks up the download recipe in `manifest.sh`, fills the URL template with the version and the build architecture, downloads, and installs by method (`deb` via `dpkg`; `tar`/`zip` extracted into `~/.local/bin`). Builds make no calls to release APIs, so they stay reproducible.
+When that runs, `install.sh`:
 
-## Pinning, overriding, and updating
+1. Reads `GIT_DELTA_VERSION` from `versions.lock`.
+2. Looks up git-delta's recipe in `manifest.sh` (URL template, install method, target dir).
+3. Fills the `{VERSION}` and `{ARCH}` placeholders in the URL. `{ARCH}` comes from the build's architecture, so the same line works on amd64 and arm64.
+4. Downloads the file and installs it: `deb` packages via `dpkg` (as root); `tar`/`zip` archives by extracting the binary into `~/.local/bin`.
 
-- **Override one tool:** edit its line in `versions.lock` and rebuild.
-- **Update everything to latest:** run `just lock` (needs `curl` + `jq`), review the `versions.lock` diff, commit. `resolve.sh` queries each tool's release API (GitHub / GitLab / HashiCorp), strips any leading `v`, and rewrites the file.
+## Common tasks
 
-## Adding a tool
+**Pin a tool to a specific version.** Edit its line in `versions.lock` and rebuild. That value wins; `resolve.sh` only changes it if you re-run `just lock`.
 
-1. Add a `tool_meta` case and a `tool_arch` mapping in `manifest.sh`, and add the tool to `ALL_TOOLS`.
-2. Add its `KEY=VERSION` line to `versions.lock` (or run `just lock`).
-3. Add `RUN install-tool <tool>` to `Dockerfile.tooling` in the right user context (`deb` tools as root; `tar`/`zip` tools as `$USERNAME`).
+**Update everything to the latest releases.** Run `just lock` (needs `curl` + `jq`). It asks each tool's release API (GitHub, GitLab, or HashiCorp) for the newest version, strips any leading `v`, and rewrites `versions.lock`. Review the diff and commit it. Builds stay on the old versions until you do.
+
+**Add a new tool.**
+
+1. In `manifest.sh`: add a `tool_meta` case (its `KIND`, `REPO`, URL template, method, version-var name, extract target) and a `tool_arch` mapping, then add the tool name to `ALL_TOOLS`.
+2. In `versions.lock`: add its `KEY=VERSION` line (or just run `just lock`).
+3. In `Dockerfile.tooling`: add `RUN install-tool <tool>` in the correct section. `deb` tools run as root; `tar`/`zip` tools run as `$USERNAME` (they install into that user's `~/.local/bin`).

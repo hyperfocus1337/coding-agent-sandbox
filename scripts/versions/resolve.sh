@@ -8,10 +8,13 @@
 #
 set -euo pipefail
 
+# ── Setup ─────────────────────────────────────────────────────────────────────
+# Load the manifest (for tool_meta / ALL_TOOLS) and pick the lockfile to write.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$script_dir/manifest.sh"                       # provides tool_meta / ALL_TOOLS
-lock_file="${1:-$script_dir/../../versions.lock}"  # default: repo-root versions.lock
+. "$script_dir/manifest.sh" # provides tool_meta / ALL_TOOLS
+lock_file="${1:-$script_dir/../../versions.lock}" # default: repo-root versions.lock
 
+# Fail fast if jq is missing — every release API response below is parsed with it.
 command -v jq >/dev/null || { echo "resolve.sh requires jq" >&2; exit 1; }
 
 # ── Fetch the latest release tag for the current tool ─────────────────────────
