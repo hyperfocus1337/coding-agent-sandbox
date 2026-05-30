@@ -60,14 +60,6 @@ RUN mkdir -p /workspace \
 
 WORKDIR /workspaces
 
-# System scripts (emacs.sh used by the Emacs install below; future system scripts also land here).
-COPY --chown=$USERNAME:$USERNAME scripts/system/ /home/$USERNAME/scripts/system/
-
-# Install Emacs to use Magit on server
-RUN mkdir -p /home/$USERNAME/.emacs.d
-COPY --chown=$USERNAME:$USERNAME config/init.el /home/$USERNAME/.emacs.d/init.el
-RUN chmod +x /home/$USERNAME/scripts/system/emacs.sh && bash /home/$USERNAME/scripts/system/emacs.sh
-
 # Install Corepack for pnpm/yarn shims. As of Node.js 25+ Corepack is no longer
 # bundled with Node (TSC vote, March 2025), so it must be installed from npm.
 # `corepack prepare` downloads the package manager version and caches it in the
