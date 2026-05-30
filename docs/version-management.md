@@ -2,6 +2,8 @@
 
 Five CLI tools in the tooling image come as prebuilt release downloads rather than apt packages: **git-delta, glab, just, just-lsp, terraform**. This describes how their versions are pinned and how they get installed.
 
+Out of scope: `PNPM_COREPACK_VERSION` and `YARN_COREPACK_VERSION` are not part of this system. They are still managed in [.github/workflows/docker-devcontainer.yml](../.github/workflows/docker-devcontainer.yml) and the repo Actions variables: <https://github.com/hyperfocus1337/coding-agent-sandbox/settings/variables/actions>.
+
 ## The idea
 
 Each tool needs two things: a **version** (which release to grab) and a **recipe** (where to download it and how to install it). We keep those separate:
@@ -13,12 +15,12 @@ Builds only ever read the pinned `versions.lock` (they never call a release API)
 
 ## Files
 
-| File                           | What it holds                                                                                                                                                              |
-|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `versions.lock` (repo root)    | The pinned version of each tool, one `KEY=value` line (e.g. `JUST_VERSION=1.36.0`). The single source of truth.                                                            |
-| `scripts/versions/manifest.sh` | The per-tool recipe: where to fetch it (`KIND`/`REPO`), the download URL template, the install method (`deb`/`tar`/`zip`), and the arch name mapping. Data only, no logic. |
-| `scripts/versions/install.sh`  | The installer. `install-tool <tool>` downloads and installs one tool at its pinned version. Run during the image build.                                                    |
-| `scripts/versions/resolve.sh`  | The updater. `just lock` rewrites `versions.lock` with the latest upstream releases. Run by hand, never during a build.                                                    |
+| File                           | What it holds                                                                                                                                                                                   |
+|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `versions.lock` (repo root)    | The pinned version of each tool, one `KEY=value` line (e.g. `JUST_VERSION=1.36.0`), with the tool's releases page linked in a comment above it for manual checking. The single source of truth. |
+| `scripts/versions/manifest.sh` | The per-tool recipe: where to fetch it (`KIND`/`REPO`), the download URL template, the install method (`deb`/`tar`/`zip`), and the arch name mapping. Data only, no logic.                      |
+| `scripts/versions/install.sh`  | The installer. `install-tool <tool>` downloads and installs one tool at its pinned version. Run during the image build.                                                                         |
+| `scripts/versions/resolve.sh`  | The updater. `just lock` rewrites `versions.lock` with the latest upstream releases. Run by hand, never during a build.                                                                         |
 
 ## How an install happens
 

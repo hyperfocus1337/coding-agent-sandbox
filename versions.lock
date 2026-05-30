@@ -1,7 +1,17 @@
 # Pinned versions for binary tools installed in Dockerfile.tooling.
-# Single source of truth. Regenerate with `just lock`; edit a line to override.
+# Single source of truth. Regenerate with 'just lock'; edit a line to override.
+#
+# PNPM_COREPACK_VERSION / YARN_COREPACK_VERSION are NOT managed here. They live in
+# .github/workflows/docker-devcontainer.yml and the repo Actions variables:
+# https://github.com/hyperfocus1337/coding-agent-sandbox/settings/variables/actions
+
+# git-delta: https://github.com/dandavison/delta/releases
 GIT_DELTA_VERSION=0.18.2
+# glab: https://gitlab.com/gitlab-org/cli/-/releases
 GLAB_VERSION=1.100.0
+# just: https://github.com/casey/just/releases
 JUST_VERSION=1.36.0
+# just-lsp: https://github.com/terror/just-lsp/releases
 JUST_LSP_VERSION=0.3.4
+# terraform: https://releases.hashicorp.com/terraform/
 TERRAFORM_VERSION=1.15.3

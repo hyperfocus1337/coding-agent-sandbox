@@ -28,6 +28,16 @@ latest_tag() {
   esac
 }
 
+# ── Human-facing releases page for the current tool ───────────────────────────
+# Written into versions.lock as a comment so a version can be verified by hand.
+releases_url() {
+  case "$KIND" in
+    github)    echo "https://github.com/$REPO/releases" ;;
+    gitlab)    echo "https://gitlab.com/$REPO/-/releases" ;;
+    hashicorp) echo "https://releases.hashicorp.com/terraform/" ;;
+  esac
+}
+
 # ── Rewrite the lockfile ──────────────────────────────────────────────────────
 # Build the new file in a temp, then move it into place atomically. For each
 # tool: resolve the latest tag, strip any leading "v", emit KEY=value.
@@ -36,9 +46,14 @@ trap 'rm -f "$tmp"' EXIT
 {
   echo "# Pinned versions for binary tools installed in Dockerfile.tooling."
   echo "# Single source of truth. Regenerate with 'just lock'; edit a line to override."
+  echo "#"
+  echo "# PNPM_COREPACK_VERSION / YARN_COREPACK_VERSION are NOT managed here. They live in"
+  echo "# .github/workflows/docker-devcontainer.yml and the repo Actions variables:"
+  echo "# https://github.com/hyperfocus1337/coding-agent-sandbox/settings/variables/actions"
   for tool in $ALL_TOOLS; do
     tool_meta "$tool"
     tag="$(latest_tag)"
+    printf '# %s: %s\n' "$tool" "$(releases_url)"
     printf '%s=%s\n' "$VERSION_VAR" "${tag#"$TAG_PREFIX"}"
   done
 } > "$tmp"
