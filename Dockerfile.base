@@ -117,6 +117,7 @@ ENV PATH="/usr/local/share/npm-global/bin:$PATH"
 # Copy user configurations
 COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish/config.fish
 COPY --chown=$USERNAME:$USERNAME config/.profile /home/$USERNAME/.profile
+COPY --chown=$USERNAME:$USERNAME config/nvim/init.lua /home/$USERNAME/.config/nvim/init.lua
 
 # SSH bootstrap (same logic for local and CI — no COPY of gitignored paths).
 # BuildKit secret `ssh_config` is optional (`required=false`). When the secret is
