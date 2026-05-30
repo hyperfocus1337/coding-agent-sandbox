@@ -20,14 +20,29 @@ SSH_CONFIG_FILE := "config/.ssh/config"
 # `container_user_password`; not stored in image history like a `--build-arg`). Omit for CI.
 SUDO_PASSWORD_FILE := "config/.sudo-password"
 
-# Running devcontainer container name and the marketplace clone inside it.
+# Running devcontainer container name.
 CONTAINER := "coding-agent-sandbox-devcontainer"
-MARKETPLACE_REPO := "/home/node/repositories/claude-marketplace"
-# Local (host) clone of claude-marketplace used by `sync-locally`.
+
+# claude-marketplace clone path inside the container.
+MARKETPLACE_REPO_CONTAINER := "/home/node/repositories/claude-marketplace"
+# claude-marketplace clone path on the host (override via MARKETPLACE_REPO_LOCAL).
 MARKETPLACE_REPO_LOCAL := env("MARKETPLACE_REPO_LOCAL", env("HOME") / "Repositories/anthropic/claude-marketplace")
+# Auto-resolved clone path: container path when run inside the devcontainer
+# (detected via /.dockerenv), else the host path.
+MARKETPLACE_REPO := if path_exists("/.dockerenv") == "true" { MARKETPLACE_REPO_CONTAINER } else { MARKETPLACE_REPO_LOCAL }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Registry & sync
+# Sync
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Pull claude-marketplace and re-run the symlink integration to refresh
+# commands, skills and CLAUDE.md in ~/.claude. Path auto-resolves: container
+# clone when run inside the devcontainer, host clone otherwise.
+sync:
+    cd {{ MARKETPLACE_REPO }} && git pull && REPO={{ MARKETPLACE_REPO }} ./scripts/integration/symlink.sh
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Registry
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Pull all images from GitHub Container Registry with latest tag.
@@ -36,19 +51,6 @@ pull:
     docker pull {{ IMAGE_TOOLING }}:latest
     docker pull {{ IMAGE_PYTHON }}:latest
     docker pull {{ IMAGE_PLAYWRIGHT }}:latest
-
-# Sync the claude-marketplace integration. Defaults to the local (host) clone.
-sync: sync-locally
-
-# Pull the local (host) claude-marketplace clone and re-run the symlink
-# integration to refresh commands, skills and CLAUDE.md in ~/.claude.
-sync-locally:
-    cd {{ MARKETPLACE_REPO_LOCAL }} && git pull && REPO={{ MARKETPLACE_REPO_LOCAL }} ./scripts/integration/symlink.sh
-
-# Pull the latest claude-marketplace inside the running container and re-run the
-# symlink integration to refresh commands, skills and CLAUDE.md in ~/.claude.
-sync-marketplace:
-    docker exec {{ CONTAINER }} bash -c 'cd {{ MARKETPLACE_REPO }} && git pull && REPO={{ MARKETPLACE_REPO }} ./scripts/integration/symlink.sh'
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Image builds
