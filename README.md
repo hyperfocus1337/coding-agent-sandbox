@@ -106,4 +106,4 @@ just update                      # one-shot pull + recreate now
 | `sync-watchtower-ghcr-auth` | Write `config/.watchtower-docker/config.json` from `gh auth token` |
 | `watchtower-auth-check`     | Fail fast if that file is missing                                  |
 | `restart-watchtower`        | Reload auth after sync                                             |
-| `update`                    | Run Watchtower once (same auth mount as compose)                   |
+| `update`                    | One-shot Watchtower with `--debug` (see `.devcontainer/README.md`) |

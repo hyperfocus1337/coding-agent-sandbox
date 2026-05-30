@@ -181,15 +181,19 @@ watchtower-auth-check:
 restart-watchtower:
     docker compose {{ COMPOSE_FILES }} restart watchtower
 
-# One-shot pull + recreate labeled containers.
+# One-shot pull + recreate labeled containers (--debug: progress during pull).
 update: watchtower-auth-check
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Watchtower: checking labeled containers (GHCR HEAD, then pull if digest changed)."
+    echo "  Large images can take minutes; --debug logs pull start/end (no layer progress)."
     docker run --rm \
         -e DOCKER_API_VERSION=1.44 \
         -e DOCKER_CONFIG=/config \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v "$(pwd)/{{ WATCHTOWER_DOCKER_CONFIG }}:/config:ro" \
         ghcr.io/nicholas-fedor/watchtower:latest \
-        --run-once --cleanup --label-enable
+        --run-once --cleanup --label-enable --debug
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Shell access
