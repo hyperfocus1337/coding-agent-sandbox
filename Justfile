@@ -1,5 +1,6 @@
 TZ := env("TZ", "Europe/Amsterdam")
 GIT_DELTA_VERSION := "0.18.2"
+GLAB_VERSION := env("GLAB_VERSION", "1.100.0")
 PNPM_COREPACK_VERSION := env("PNPM_COREPACK_VERSION", "11.0.9")
 YARN_COREPACK_VERSION := env("YARN_COREPACK_VERSION", "4.14.1")
 JUST_VERSION := env("JUST_VERSION", "1.36.0")
@@ -50,6 +51,7 @@ build-tooling:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_BASE }}:latest" \
         --build-arg GIT_DELTA_VERSION="{{ GIT_DELTA_VERSION }}" \
+        --build-arg GLAB_VERSION="{{ GLAB_VERSION }}" \
         --build-arg JUST_VERSION="{{ JUST_VERSION }}" \
         --build-arg JUST_LSP_VERSION="{{ JUST_LSP_VERSION }}" \
         --build-arg TERRAFORM_VERSION="{{ TERRAFORM_VERSION }}" \
