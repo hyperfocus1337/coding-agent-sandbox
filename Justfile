@@ -206,3 +206,7 @@ enter:
 # Enter the devcontainer with a shell (using docker exec).
 docker-enter:
     docker exec -it {{ CONTAINER }} fish
+
+# Step into a project directory and open a shell there (e.g. `just cd my-project`).
+cd PROJECT_NAME:
+    docker exec -it {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}"
