@@ -16,6 +16,26 @@ IMAGE_PYTHON := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python
 IMAGE_PLAYWRIGHT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright"
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Shell access
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Enter the devcontainer with a shell (using devcontainer CLI).
+enter:
+    devcontainer exec fish
+
+# Enter the devcontainer with a shell (using docker exec).
+docker-enter:
+    docker exec -it {{ CONTAINER }} fish
+
+# Step into a project directory and open a shell there (e.g. `just cd my-project`).
+cd PROJECT_NAME:
+    docker exec -it {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}"
+
+# Step into a project directory and run Claude there (e.g. `just claude my-project`).
+claude PROJECT_NAME:
+    docker exec -it {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions"
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Registry
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -194,19 +214,3 @@ update: watchtower-auth-check
         -v "$(pwd)/{{ WATCHTOWER_DOCKER_CONFIG }}:/config:ro" \
         ghcr.io/nicholas-fedor/watchtower:latest \
         --run-once --cleanup --label-enable --debug
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Shell access
-# ──────────────────────────────────────────────────────────────────────────────
-
-# Enter the devcontainer with a shell (using devcontainer CLI).
-enter:
-    devcontainer exec fish
-
-# Enter the devcontainer with a shell (using docker exec).
-docker-enter:
-    docker exec -it {{ CONTAINER }} fish
-
-# Step into a project directory and open a shell there (e.g. `just cd my-project`).
-cd PROJECT_NAME:
-    docker exec -it {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}"
