@@ -165,6 +165,11 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g opencode-ai
 
+# Install GitLab Duo CLI
+# https://docs.gitlab.com/user/gitlab_duo_cli/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @gitlab/duo-cli
+
 # Install Tessl CLI
 RUN curl -fsSL https://get.tessl.io | sh
 
