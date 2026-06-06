@@ -16,6 +16,14 @@ IMAGE_PYTHON := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python
 IMAGE_PLAYWRIGHT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright"
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Default
+# ──────────────────────────────────────────────────────────────────────────────
+
+# List all available recipes (default when running `just` with no arguments).
+default:
+    @just --list
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Shell access
 # ──────────────────────────────────────────────────────────────────────────────
 
