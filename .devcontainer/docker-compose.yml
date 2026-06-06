@@ -19,8 +19,10 @@ services:
     volumes:
       - ..:/workspaces/coding-agent-sandbox:cached
       - coding-agent-sandbox-claude-config:/home/node/.claude
-      - coding-agent-sandbox-opencode-config:/home/node/.opencode
+      - coding-agent-sandbox-gitlab-duo-config:/home/node/.gitlab
+      - coding-agent-sandbox-gitlab-cli-config:/home/node/.config/glab-cli
       - coding-agent-sandbox-opencode-auth:/home/node/.local/share/opencode
+      - coding-agent-sandbox-opencode-config:/home/node/.opencode
       - coding-agent-sandbox-cursor-state:/home/node/.cursor-server
       - coding-agent-sandbox-vscode-state:/home/node/.vscode-server
       - coding-agent-sandbox-fish-history:/home/node/.local/share/fish
@@ -48,6 +50,10 @@ services:
 
 volumes:
   coding-agent-sandbox-claude-config:
+    external: true
+  coding-agent-sandbox-gitlab-duo-config:
+    external: true
+  coding-agent-sandbox-gitlab-cli-config:
     external: true
   coding-agent-sandbox-opencode-config:
     external: true
