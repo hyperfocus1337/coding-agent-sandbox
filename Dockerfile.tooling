@@ -104,11 +104,6 @@ RUN install-tool just-lsp
 # Terraform. Version pinned in versions.lock.
 RUN install-tool terraform
 
-# Oracle Cloud Infrastructure (OCI) CLI via official Oracle install script.
-# https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm
-# Config file: ~/.oci/config — must be configured (e.g. `oci setup config`) before usage is enabled.
-RUN bash -c "$(curl -fsSL https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
-
 # Prettier code formatter
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g prettier

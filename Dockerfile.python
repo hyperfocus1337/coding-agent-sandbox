@@ -30,3 +30,11 @@ ENV UV_TOOL_BIN_DIR="/home/$USERNAME/.local/bin"
 
 # Ruff (Python linter/formatter) via uv tool install — lands in UV_TOOL_BIN_DIR set above.
 RUN uv tool install ruff
+
+# Oracle Cloud Infrastructure (OCI) CLI via uv tool install (PyPI package `oci-cli`).
+# Lives here, not in the tooling image: it is a Python package and needs python3 + venv
+# (uv provisions an isolated venv per tool). The vendor install.sh is avoided on purpose —
+# it pulls an ancient virtualenv that breaks on Python 3.13 (`ModuleNotFoundError: pipes`).
+# https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm
+# Config file: ~/.oci/config — must be configured (e.g. `oci setup config`) before usage is enabled.
+RUN uv tool install oci-cli
