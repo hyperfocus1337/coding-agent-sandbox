@@ -21,6 +21,9 @@ services:
       - coding-agent-sandbox-claude-config:/home/node/.claude
       - coding-agent-sandbox-gitlab-duo-config:/home/node/.gitlab
       - coding-agent-sandbox-gitlab-cli-config:/home/node/.config/glab-cli
+      - coding-agent-sandbox-aws-cli-config:/home/node/.aws
+      - coding-agent-sandbox-azure-cli-config:/home/node/.azure
+      - coding-agent-sandbox-oracle-cli-config:/home/node/.oci
       - coding-agent-sandbox-opencode-auth:/home/node/.local/share/opencode
       - coding-agent-sandbox-opencode-config:/home/node/.opencode
       - coding-agent-sandbox-cursor-state:/home/node/.cursor-server
@@ -54,6 +57,12 @@ volumes:
   coding-agent-sandbox-gitlab-duo-config:
     external: true
   coding-agent-sandbox-gitlab-cli-config:
+    external: true
+  coding-agent-sandbox-aws-cli-config:
+    external: true
+  coding-agent-sandbox-azure-cli-config:
+    external: true
+  coding-agent-sandbox-oracle-cli-config:
     external: true
   coding-agent-sandbox-opencode-config:
     external: true
