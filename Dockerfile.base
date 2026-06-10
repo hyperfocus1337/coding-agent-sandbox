@@ -39,6 +39,41 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     direnv \
     postgresql-client
 
+# Tools commonly invoked by AI coding agents. Pinned here so they are always
+# present regardless of what the base image ships. See README.md
+# ("apt packages") for the per-package breakdown. fd-find/bat install under
+# Debian-specific binary names (fdfind/batcat); the symlinks expose fd/bat.
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    ripgrep \
+    fd-find \
+    bat \
+    shellcheck \
+    universal-ctags \
+    patch \
+    patchutils \
+    miller \
+    csvkit \
+    httpie \
+    netcat-openbsd \
+    socat \
+    lsof \
+    file \
+    moreutils \
+    ncdu \
+    strace \
+    rsync && \
+    ln -s "$(command -v fdfind)" /usr/local/bin/fd && \
+    ln -s "$(command -v batcat)" /usr/local/bin/bat
+
+# yq (YAML/TOML/XML processor) has no clean apt package; install the static
+# binary from mikefarah/yq. TARGETARCH (amd64/arm64) maps to yq asset names.
+ARG YQ_VERSION=v4.47.2
+RUN curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${TARGETARCH}" \
+    -o /usr/local/bin/yq && \
+    chmod 0755 /usr/local/bin/yq
+
 # Install Starship prompt
 RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes && \
     echo "starship init bash | source" >> ~/.bashrc

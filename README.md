@@ -6,12 +6,62 @@ This directory defines a [Dev Container](https://containers.dev/) environment fo
 
 ### Images
 
-| Path                    | Description                                                                                                                                                                                                                                                                                                                   |
-|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Dockerfile.base`       | Base image on [`node:26-trixie`](https://github.com/nodejs/docker-node/tree/main/26/trixie). OS apt packages, Starship, Corepack (pnpm/yarn), SSH + sudo bootstrap, default editor, permissions — **no developer tooling, no Python**. Consume this for a minimal Node + shell baseline.                                      |
-| `Dockerfile.tooling`    | Child image on top of `devcontainer-base`: general developer tooling (GitHub CLI, git-delta, `just`, just-lsp) then AI tooling (Anthropic sandbox-runtime, Claude Code, Codex, Gemini, OpenCode, Tessl, Claude plugins/MCP). `BASE_IMAGE` selects the base (default `…/devcontainer-base:latest`; CI pins digest after push). |
-| `Dockerfile.python`     | Child image on top of `devcontainer-tooling`: adds `python3` + `uv`. `BASE_IMAGE` selects the base (default `…/devcontainer-tooling:latest`; CI pins digest after push).                                                                                                                                                      |
-| `Dockerfile.playwright` | Child image on top of `devcontainer-python`: Playwright system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`). `BASE_IMAGE` selects the base (default `…/devcontainer-python:latest`; CI pins digest after push).                                                                                              |
+| Path                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Dockerfile.base`       | Base image on [`node:26-trixie`](https://github.com/nodejs/docker-node/tree/main/26/trixie). OS apt packages (baseline shell/dev tools plus an AI-agent CLI toolkit — ripgrep, fd, bat, yq, …; see [apt packages](#apt-packages-dockerfilebase)), Starship, Corepack (pnpm/yarn), SSH + sudo bootstrap, default editor, permissions — **no developer tooling, no Python**. Consume this for a minimal Node + shell baseline. |
+| `Dockerfile.tooling`    | Child image on top of `devcontainer-base`: general developer tooling (GitHub CLI, git-delta, `just`, just-lsp) then AI tooling (Anthropic sandbox-runtime, Claude Code, Codex, Gemini, OpenCode, Tessl, Claude plugins/MCP). `BASE_IMAGE` selects the base (default `…/devcontainer-base:latest`; CI pins digest after push).                                                                                                |
+| `Dockerfile.python`     | Child image on top of `devcontainer-tooling`: adds `python3` + `uv`. `BASE_IMAGE` selects the base (default `…/devcontainer-tooling:latest`; CI pins digest after push).                                                                                                                                                                                                                                                     |
+| `Dockerfile.playwright` | Child image on top of `devcontainer-python`: Playwright system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`). `BASE_IMAGE` selects the base (default `…/devcontainer-python:latest`; CI pins digest after push).                                                                                                                                                                                             |
+
+### apt packages (`Dockerfile.base`)
+
+`Dockerfile.base` installs OS packages in two logical `apt-get` blocks. Grouping lives here in the docs, not in extra Docker layers: each block is one layer + one `apt-get update`, and the more frequently edited AI-agent block sits last so changing it never rebuilds the baseline layer.
+
+**Baseline** — general shell + dev essentials:
+
+| Package             | Provides          | Purpose                                          |
+|---------------------|-------------------|--------------------------------------------------|
+| `less`              |                   | pager                                            |
+| `git`               |                   | version control                                  |
+| `procps`            | `ps`, `top`       | process inspection                               |
+| `sudo`              |                   | privilege escalation (see sudo password section) |
+| `fzf`               |                   | fuzzy finder                                     |
+| `fish`              |                   | default interactive shell                        |
+| `man-db`            | `man`             | manual pages                                     |
+| `unzip`             |                   | archive extraction                               |
+| `ca-certificates`   |                   | TLS root certs                                   |
+| `curl` / `wget`     |                   | HTTP download                                    |
+| `gnupg` / `gnupg2`  | `gpg`             | signature/key handling                           |
+| `dnsutils`          | `dig`, `nslookup` | DNS debugging                                    |
+| `jq`                |                   | JSON processor                                   |
+| `tree`              |                   | directory tree view                              |
+| `neovim`            | `nvim`            | default editor (`EDITOR`/`VISUAL`)               |
+| `direnv`            |                   | per-directory env loading                        |
+| `postgresql-client` | `psql`            | Postgres CLI                                     |
+
+**AI-agent tooling** — utilities coding agents shell out to, pinned so they are always present:
+
+| Package           | Provides                        | Purpose                                                                                   |
+|-------------------|---------------------------------|-------------------------------------------------------------------------------------------|
+| `ripgrep`         | `rg`                            | fast recursive grep; Claude Code's search backend                                         |
+| `fd-find`         | `fd` (symlinked from `fdfind`)  | fast file finder                                                                          |
+| `bat`             | `bat` (symlinked from `batcat`) | `cat` with syntax highlight + line numbers                                                |
+| `shellcheck`      |                                 | shell script linter                                                                       |
+| `universal-ctags` | `ctags`                         | symbol/tag indexing for code nav                                                          |
+| `patch`           |                                 | apply unified diffs                                                                       |
+| `patchutils`      | `filterdiff`, `interdiff`, …    | manipulate patches                                                                        |
+| `miller`          | `mlr`                           | CSV/TSV/JSON stream processor                                                             |
+| `csvkit`          | `csvlook`, `csvcut`, …          | CSV toolkit                                                                               |
+| `httpie`          | `http`, `https`                 | friendly HTTP client                                                                      |
+| `netcat-openbsd`  | `nc`                            | TCP/UDP socket tool                                                                       |
+| `socat`           |                                 | bidirectional socket relay                                                                |
+| `lsof`            |                                 | list open files / ports                                                                   |
+| `file`            |                                 | detect file type by content                                                               |
+| `moreutils`       | `sponge`, `ts`, `chronic`, …    | extra Unix utilities                                                                      |
+| `ncdu`            |                                 | interactive disk usage browser                                                            |
+| `strace`          |                                 | trace syscalls / signals                                                                  |
+| `rsync`           |                                 | fast incremental file sync                                                                |
+| `yq`              | `yq`                            | YAML/TOML/XML processor — installed as a pinned static binary (`YQ_VERSION`), not via apt |
 
 ### Configuration and scripts
 
