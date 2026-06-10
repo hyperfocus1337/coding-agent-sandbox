@@ -17,10 +17,15 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 
 # Playwright: system deps + Chromium (root). PLAYWRIGHT_BROWSERS_PATH + chown so $USERNAME can run browsers.
+# Single `uv run` so the ephemeral playwright env is resolved once (not per subcommand), with a
+# build cache mount for uv so the driver/node download is reused across builds and kept out of the
+# image layer. chown stays in the same RUN so the browser tree is written with final ownership and
+# never duplicated into a second layer. `--no-shell` skips the chromium-headless-shell build, halving
+# the browser download; drop it if headed Chromium is needed at runtime.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
-  uv run --with playwright playwright install-deps && \
-  uv run --with playwright playwright install chromium && \
+RUN --mount=type=cache,target=/root/.cache/uv \
+  mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
+  uv run --with playwright sh -c 'playwright install-deps && playwright install --no-shell chromium' && \
   chown -R "$USERNAME:$USERNAME" "$PLAYWRIGHT_BROWSERS_PATH"
 
 USER ${USERNAME}
