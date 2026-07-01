@@ -186,9 +186,9 @@ rm:
 WATCHTOWER_DOCKER_CONFIG := "config/.watchtower-docker"
 WATCHTOWER_DOCKER_CONFIG_FILE := WATCHTOWER_DOCKER_CONFIG + "/config.json"
 
-# Sync config from `gh`; once per machine / after token rotation.
-sync-watchtower-ghcr-auth:
-    bash scripts/watchtower/sync-ghcr-auth.sh
+# Sync config from $GHCR_TOKEN (or `gh`); once per machine / after token rotation. Pass --force to rewrite.
+sync-watchtower-ghcr-auth *args:
+    bash scripts/watchtower/sync-ghcr-auth.sh {{ args }}
 
 # Fail if config missing (run sync-watchtower-ghcr-auth first).
 watchtower-auth-check:
