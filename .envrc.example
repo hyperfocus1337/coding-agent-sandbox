@@ -1,0 +1,5 @@
+# Copy to .envrc (gitignored), fill in, then run: direnv allow
+# Classic PAT with read:packages only. See scripts/watchtower/README.md.
+export GHCR_TOKEN=ghp_xxxxxxxxxxxxxxxx
+# Optional: username for ghcr.io Basic auth (any non-empty value works).
+# export GHCR_USER=your-machine-account
