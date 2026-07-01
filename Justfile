@@ -28,7 +28,7 @@ default:
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Enter the devcontainer with a shell (using devcontainer CLI).
-enter:
+devcontainer-enter:
     devcontainer exec fish
 
 # Enter the devcontainer with a shell (using docker exec).
