@@ -191,11 +191,11 @@ RUN curl -sSL https://aka.ms/apm-unix | APM_INSTALL_DIR="$HOME/.local/bin" sh
 # Personal Git identity (gitignored, not committed). Provide config/.gitconfig locally before building.
 COPY --chown=$USERNAME:$USERNAME config/.gitconfig /home/$USERNAME/.gitconfig
 
-# Agent helper scripts (claude.sh installs Claude Code plugins/MCP servers via the CLI installed above).
+# Agent helper scripts (config.sh installs Claude Code plugins/MCP servers via the CLI installed above).
 COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
 
-# Install Claude Code plugins and MCP servers
-RUN bash /home/$USERNAME/scripts/agents/claude.sh
+# Install agent dependencies
+RUN bash /home/$USERNAME/scripts/agents/config.sh
 
 # Install Gemini extensions
 # RUN bash /home/$USERNAME/scripts/agents/gemini.sh

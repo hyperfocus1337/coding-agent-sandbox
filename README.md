@@ -69,7 +69,7 @@ This directory defines a [Dev Container](https://containers.dev/) environment fo
 |----------------------------|--------------------------------------------------------------------------------------------------------|
 | `.devcontainer/`           | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally). |
 | `config/config.fish`       | Fish shell configuration (Starship prompt, direnv hook, PATH).                                         |
-| `scripts/agents/claude.sh` | Installs Claude Code plugins and MCP servers (Context7, Tessl, GitHub).                                |
+| `scripts/agents/config.sh` | Installs Claude Code plugins and MCP servers (Context7, Tessl, GitHub).                                |
 | `scripts/agents/gemini.sh` | Gemini CLI extensions (CLI is installed in `Dockerfile.tooling`; this script is commented out there).  |
 | `Justfile`                 | Convenience commands for building the images and common container tasks.                               |
 
