@@ -184,6 +184,10 @@ RUN curl -fsSL https://herdr.dev/install.sh | sh && \
     herdr integration install claude && \
     herdr integration install opencode
 
+# Install Agent Package Manager (apm)
+# https://microsoft.github.io/apm/
+RUN curl -sSL https://aka.ms/apm-unix | APM_INSTALL_DIR="$HOME/.local/bin" sh
+
 # Personal Git identity (gitignored, not committed). Provide config/.gitconfig locally before building.
 COPY --chown=$USERNAME:$USERNAME config/.gitconfig /home/$USERNAME/.gitconfig
 
