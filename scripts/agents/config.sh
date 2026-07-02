@@ -16,6 +16,5 @@ cd /home/$USERNAME/repositories/coding-agent-config
 # Run chezmoi to apply the configuration to the home directory
 just chezmoi
 
-# Skip installing as Docker mounts the ~/.claude directory from the volume
-# Run the install.sh script to install extensions (plugins, skills or mcp servers)
-# ./extensions/install.sh
+# Run the install.sh script to install extensions (plugins, skills and mcp servers)
+just extensions
