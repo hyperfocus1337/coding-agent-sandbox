@@ -22,14 +22,6 @@ ARG TARGETARCH
 # ----- Root: system-wide installs (apt, dpkg, vendor scripts to /usr/local) -----
 USER root
 
-# Binary-tool installer: shared helper + manifest + pinned versions (versions.lock).
-# COPY'd before first use so both the root-context and $USERNAME-context tool installs below
-# can call `install-tool <name>`. Bumping versions.lock invalidates layers from here down (intended).
-COPY scripts/versions/ /usr/local/share/tool-install/
-COPY versions.lock /usr/local/share/tool-install/versions.lock
-RUN chmod +x /usr/local/share/tool-install/install.sh \
-    && ln -s /usr/local/share/tool-install/install.sh /usr/local/bin/install-tool
-
 # Github CLI (apt from custom keyring).
 # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
@@ -43,13 +35,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
     && apt update \
     && apt install gh -y
-
-# GitLab CLI (glab). Version pinned in versions.lock.
-# https://gitlab.com/gitlab-org/cli/-/releases
-RUN install-tool glab
-
-# Git Delta: pretty git diffs. Version pinned in versions.lock.
-RUN install-tool git-delta
 
 # Powerline fonts for shell prompts (glyphs used by powerline/starship/p10k themes).
 # https://github.com/powerline/fonts
@@ -95,14 +80,12 @@ RUN ARCH=$(uname -m) && \
 # ----- User: user-local binaries (~/.local/bin) and npm globals -----
 USER $USERNAME
 
-# just CLI. Version pinned in versions.lock.
-RUN install-tool just
-
-# just-lsp. Version pinned in versions.lock.
-RUN install-tool just-lsp
-
-# Terraform. Version pinned in versions.lock.
-RUN install-tool terraform
+# Pinned release binaries via mise, replacing the old versions.lock installer.
+# Versions come from the mise.toml baked into the base image. Short names resolve
+# through mise's registry; git-delta uses its explicit aqua backend and just-lsp
+# (not in the registry) uses the ubi GitHub-release backend, which downloads +
+# extracts the release binary just as the old install.sh did.
+RUN mise install glab just terraform aqua:dandavison/delta ubi:terror/just-lsp
 
 # Prettier code formatter
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \

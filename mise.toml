@@ -1,0 +1,29 @@
+# Single source of truth for the tool and language versions baked into the
+# devcontainer images. Edit a version here and rebuild; this file is COPY'd into
+# the base image as mise's global config (/usr/local/share/mise/config.toml) and
+# each layer installs its subset with `mise install <tools>`, reading the pins
+# from here:
+#   Dockerfile.base    -> node, pnpm, yarn, yq, starship
+#   Dockerfile.tooling -> glab, just, terraform, git-delta (aqua:dandavison/delta), just-lsp
+#   Dockerfile.python  -> python, uv
+#
+# `mise registry` lists the short names; tools not in the registry use an
+# explicit backend (aqua:/ubi:/github:/gitlab:).
+[tools]
+# Languages + package managers (Dockerfile.base / Dockerfile.python)
+node = "26"
+pnpm = "11.0.9"
+yarn = "4.14.1"
+python = "3.13"
+uv = "latest"
+
+# Shell/prompt + data tooling (Dockerfile.base)
+yq = "4.47.2"
+starship = "latest"
+
+# Pinned developer release binaries (Dockerfile.tooling)
+glab = "1.100.0"
+just = "1.51.0"
+terraform = "1.15.5"
+"aqua:dandavison/delta" = "0.19.2"
+"ubi:terror/just-lsp" = "0.4.5"

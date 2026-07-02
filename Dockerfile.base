@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
-# https://hub.docker.com/_/node
-# https://github.com/nodejs/docker-node/tree/main/26/trixie
-FROM node:26-trixie
+# https://hub.docker.com/_/debian
+# Debian 13 (trixie), the current stable release. Node no longer comes from the
+# base image; mise installs it (and every other language runtime) below.
+FROM debian:trixie-slim
 
 # Pass timezone as build argument
 ARG TZ
@@ -14,6 +15,11 @@ ARG USER_GID=1000
 
 # Automatically set by BuildKit for multi-platform builds; used to scope apt caches per arch
 ARG TARGETARCH
+
+# The node image used to provide this user; on a plain Debian base we create it
+# ourselves so the uid/gid the devcontainer expects (1000:1000) exists.
+RUN groupadd --gid "$USER_GID" "$USERNAME" \
+    && useradd --uid "$USER_UID" --gid "$USER_GID" --create-home --shell /bin/bash "$USERNAME"
 
 # Install basic development tools
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
@@ -67,20 +73,34 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     ln -s "$(command -v fdfind)" /usr/local/bin/fd && \
     ln -s "$(command -v batcat)" /usr/local/bin/bat
 
-# yq (YAML/TOML/XML processor) has no clean apt package; install the static
-# binary from mikefarah/yq. TARGETARCH (amd64/arm64) maps to yq asset names.
-ARG YQ_VERSION=v4.47.2
-RUN curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${TARGETARCH}" \
-    -o /usr/local/bin/yq && \
-    chmod 0755 /usr/local/bin/yq
+# mise: polyglot runtime + tool manager. Installs node/python and the pinned
+# release binaries (yq, starship, git-delta, just, terraform, …) in later steps
+# and layers, replacing the old per-tool installers. extrepo is the Debian-blessed
+# way to enable the upstream apt repo; it (and its deps) are dropped afterwards.
+# https://github.com/jdx/mise/blob/main/docs/mise-cookbook/docker.md
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends extrepo \
+    && extrepo enable mise \
+    && apt-get remove -y --auto-remove extrepo \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends mise build-essential
 
-# Install Starship prompt
-RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes && \
-    echo "starship init bash | source" >> ~/.bashrc
+# mise data + config live outside $HOME (like NPM_CONFIG_PREFIX below) so the
+# baked-in tools and version pins are not shadowed by the devcontainer's $HOME
+# volume mounts. Shims go on PATH so tools resolve in any shell without activation.
+ENV MISE_DATA_DIR="/usr/local/share/mise"
+ENV MISE_CONFIG_DIR="/usr/local/share/mise"
+ENV PATH="/usr/local/share/mise/shims:$PATH"
 
-# Ensure default node user has access to /usr/local/share
-RUN mkdir -p /usr/local/share/npm-global && \
+# Ensure default node user has access to /usr/local/share (npm globals + mise data)
+RUN mkdir -p /usr/local/share/npm-global /usr/local/share/mise && \
     chown -R $USERNAME:$USERNAME /usr/local/share
+
+# mise's global config: the committed mise.toml is the single source of truth for
+# every tool/language version across all layers. Each layer runs `mise install
+# <subset>` and reads the pins from here. Bump a version by editing mise.toml.
+COPY --chown=$USERNAME:$USERNAME mise.toml /usr/local/share/mise/config.toml
 
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
@@ -95,26 +115,6 @@ RUN mkdir -p /workspace \
     /home/$USERNAME/.cursor-server
 
 WORKDIR /workspaces
-
-# Install Corepack for pnpm/yarn shims. As of Node.js 25+ Corepack is no longer
-# bundled with Node (TSC vote, March 2025), so it must be installed from npm.
-# `corepack prepare` downloads the package manager version and caches it in the
-# corepack store; `--activate` sets it as the default used when a project has no
-# `packageManager` field in package.json (project-level pins always take precedence).
-#
-# Pin versions: `pnpm@latest` / `yarn@stable` resolve tags via extra registry
-# metadata fetches that are brittle during `docker build` (network/DNS flakiness).
-# No defaults here—pass `--build-arg` (see `Justfile` and `.github/workflows/docker-devcontainer.yml`).
-ARG PNPM_COREPACK_VERSION
-ARG YARN_COREPACK_VERSION
-RUN --mount=type=cache,target=/root/.npm \
-    set -eu; \
-    : "${PNPM_COREPACK_VERSION:?PNPM_COREPACK_VERSION is required (use Justfile or docker build --build-arg)}"; \
-    : "${YARN_COREPACK_VERSION:?YARN_COREPACK_VERSION is required (use Justfile or docker build --build-arg)}"; \
-    npm install -g corepack@latest && \
-    corepack enable && \
-    corepack prepare "pnpm@${PNPM_COREPACK_VERSION}" --activate && \
-    corepack prepare "yarn@${YARN_COREPACK_VERSION}" --activate
 
 # Image version stamp for home-dir initialization tracking (written before USER switch)
 ARG IMAGE_VERSION
@@ -149,6 +149,13 @@ ENV VISUAL="nvim"
 ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
 ENV PATH="/usr/local/share/npm-global/bin:$PATH"
+
+# Languages and package managers via mise (installed as $USERNAME so they land in
+# the user-owned MISE_DATA_DIR). Versions come from mise.toml COPY'd above. Node
+# brings its own npm, so the tooling layer's `npm install -g` and NPM_CONFIG_PREFIX
+# above keep working through the mise shim. pnpm/yarn replace the old Corepack
+# dance; yq and starship replace a binary download and a vendor script.
+RUN mise install node pnpm yarn yq starship
 
 # Copy user configurations
 COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish/config.fish

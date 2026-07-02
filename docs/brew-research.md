@@ -1,5 +1,14 @@
 # Investigation: could Homebrew on Linux replace package installs?
 
+> **Update:** the languages and the standalone release binaries have since moved
+> to [mise](https://github.com/jdx/mise) (see [version-management.md](version-management.md)).
+> That does not contradict this note's verdict against Homebrew: mise is a
+> purpose-built polyglot version manager (not a second OS package manager), it
+> pins exact versions so builds stay reproducible, and it leaves base OS
+> utilities on apt, the agent CLIs on npm, and ruff/oci-cli on uv, exactly as
+> argued below. So the "keep on version scripts" recommendations in the tables
+> now read as "keep pinned via mise".
+
 This note records whether the packages installed across the four Dockerfiles ([Dockerfile.base](../Dockerfile.base), [Dockerfile.tooling](../Dockerfile.tooling), [Dockerfile.python](../Dockerfile.python), [Dockerfile.playwright](../Dockerfile.playwright)) could be installed through Homebrew for Linux instead of their current managers (apt, single-binary downloads, vendor install scripts, npm, and uv).
 
 It started as a narrower question about the version-pinning scripts under [scripts/versions/](../scripts/versions/) (see [version-management.md](version-management.md)) and was widened to every package.

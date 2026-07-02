@@ -7,22 +7,11 @@ FROM ${BASE_IMAGE}
 # Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
 ARG USERNAME=node
 
-# Automatically set by BuildKit for multi-platform builds; used to scope apt caches per arch.
-ARG TARGETARCH
-
-# apt install must run as root; base image ends as non-root.
-USER root
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    python3-pip \
-    python3-venv
-
-# UV package manager (standalone binary)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
-USER $USERNAME
+# Python + uv via mise (installed as $USERNAME into the user-owned MISE_DATA_DIR).
+# Versions come from the mise.toml baked into the base image. mise's standalone
+# Python build bundles pip and venv, so no apt python3 is needed; uv replaces the
+# copy from the astral image.
+RUN mise install python uv
 
 # Land any future `uv tool install` calls in ~/.local/bin (writable by $USERNAME, already on PATH
 # from the base image). Without this, uv's default can vary by version.

@@ -1,50 +1,75 @@
-# Binary tool version management
+# Tool and language version management
 
-Five CLI tools in the tooling image come as prebuilt release downloads rather than apt packages: **git-delta, glab, just, just-lsp, terraform**. This describes how their versions are pinned and how they get installed.
+Languages (Node, Python) and the pinned release binaries (git-delta, glab,
+just, just-lsp, terraform, yq, starship) plus the package managers (pnpm, yarn,
+uv) are all installed and pinned through [mise](https://github.com/jdx/mise).
+This replaces the old hand-rolled system (`versions.lock` +
+`scripts/versions/{manifest,install,resolve}.sh`) and the Corepack dance.
 
-Out of scope: `PNPM_COREPACK_VERSION` and `YARN_COREPACK_VERSION` are not part of this system. They are still managed in [.github/workflows/docker-devcontainer.yml](../.github/workflows/docker-devcontainer.yml) and the repo Actions variables: <https://github.com/hyperfocus1337/coding-agent-sandbox/settings/variables/actions>.
+## How it works
 
-## The idea
-
-Each tool needs two things: a **version** (which release to grab) and a **recipe** (where to download it and how to install it). We keep those separate:
-
-- The version of every tool lives in one file, `versions.lock`. Change a version in exactly one place.
-- The recipe for every tool lives in one file, `manifest.sh`. One small installer script reads both and does the work, so there is no per-tool download code copied around.
-
-Builds only ever read the pinned `versions.lock` (they never call a release API), so an image rebuilt from the same commit installs the same versions.
-
-## Files
-
-| File                           | What it holds                                                                                                                                                                                   |
-|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `versions.lock` (repo root)    | The pinned version of each tool, one `KEY=value` line (e.g. `JUST_VERSION=1.36.0`), with the tool's releases page linked in a comment above it for manual checking. The single source of truth. |
-| `scripts/versions/manifest.sh` | The per-tool recipe: where to fetch it (`KIND`/`REPO`), the download URL template, the install method (`deb`/`tar`/`zip`), and the arch name mapping. Data only, no logic.                      |
-| `scripts/versions/install.sh`  | The installer. `install-tool <tool>` downloads and installs one tool at its pinned version. Run during the image build.                                                                         |
-| `scripts/versions/resolve.sh`  | The updater. `just lock` rewrites `versions.lock` with the latest upstream releases. Run by hand, never during a build.                                                                         |
-
-## How an install happens
-
-`Dockerfile.tooling` copies `scripts/versions/` and `versions.lock` into the image and exposes the installer on `PATH` as `install-tool`. Each tool is then one line, e.g.:
+mise is installed once in `Dockerfile.base` via Debian's `extrepo`
+(the vendor-recommended [Docker recipe](https://github.com/jdx/mise/blob/main/docs/mise-cookbook/docker.md)).
+Its data and config live outside `$HOME` so the baked-in tools survive the
+devcontainer's `$HOME` volume mounts:
 
 ```dockerfile
-RUN install-tool git-delta
+ENV MISE_DATA_DIR="/usr/local/share/mise"
+ENV MISE_CONFIG_DIR="/usr/local/share/mise"
+ENV PATH="/usr/local/share/mise/shims:$PATH"
 ```
 
-When that runs, `install.sh`:
+Every version lives in one file: [`mise.toml`](../mise.toml) at the repo root.
+`Dockerfile.base` COPYs it in as mise's global config
+(`/usr/local/share/mise/config.toml`), then each layer materializes only its
+subset with `mise install <tools>`, reading the pins from that config:
 
-1. Reads `GIT_DELTA_VERSION` from `versions.lock`.
-2. Looks up git-delta's recipe in `manifest.sh` (URL template, install method, target dir).
-3. Fills the `{VERSION}` and `{ARCH}` placeholders in the URL. `{ARCH}` comes from the build's architecture, so the same line works on amd64 and arm64.
-4. Downloads the file and installs it: `deb` packages via `dpkg` (as root); `tar`/`zip` archives by extracting the binary into `~/.local/bin`.
+| Layer                | `mise install …`                                     |
+|----------------------|------------------------------------------------------|
+| `Dockerfile.base`    | `node`, `pnpm`, `yarn`, `yq`, `starship`             |
+| `Dockerfile.tooling` | `glab`, `just`, `terraform`, `git-delta`, `just-lsp` |
+| `Dockerfile.python`  | `python`, `uv`                                       |
+
+`mise install <tool>` installs the tool into `MISE_DATA_DIR` at the version
+pinned in `mise.toml` and writes a shim onto `PATH`. Because the shims dir is on
+`PATH`, the tools resolve in any shell without activation; `config.fish`
+additionally runs `mise activate fish` so a developer can `mise use` new tools
+at runtime.
+
+Managing versions from one file outside the container is the point: edit
+`mise.toml`, rebuild, done. It beats build-args (which would spread `ARG`
+declarations across three Dockerfiles plus the Justfile and CI) because mise
+reads the file natively with no glue.
+
+## Backends
+
+Most tools resolve by short name through mise's built-in
+[registry](https://mise.jdx.dev/registry.html) (`mise registry` lists them).
+Two use an explicit backend:
+
+- **git-delta** — `aqua:dandavison/delta@<ver>` (its registry short name is
+  `delta`; the explicit aqua backend is unambiguous).
+- **just-lsp** — `ubi:terror/just-lsp@<ver>`. It is not in the registry, so the
+  `ubi` backend downloads and extracts the GitHub release binary directly, which
+  is exactly what the retired `install.sh` did.
 
 ## Common tasks
 
-**Pin a tool to a specific version.** Edit its line in `versions.lock` and rebuild. That value wins; `resolve.sh` only changes it if you re-run `just lock`.
+**Pin or change a version.** Edit the tool's line in `mise.toml` and rebuild.
+That file is the single source of truth (the role `versions.lock` used to play).
 
-**Update everything to the latest releases.** Run `just lock` (needs `curl` + `jq`). It asks each tool's release API (GitHub, GitLab, or HashiCorp) for the newest version, strips any leading `v`, and rewrites `versions.lock`. Review the diff and commit it. Builds stay on the old versions until you do.
+**See newer versions.** In a running container, `mise outdated` shows what is
+available. Update `mise.toml` to match, then rebuild.
 
-**Add a new tool.**
+**Add a new tool.** Add a `<tool> = "<version>"` line to `mise.toml`, then add
+the tool name to the `mise install …` call in the appropriate layer (base for
+languages/prompt tools, tooling for dev binaries, python for Python tooling). If
+the short name is not in the registry, use an explicit backend as the key
+(`"aqua:owner/repo"`, `"ubi:owner/repo"`, `github:`, `gitlab:`).
 
-1. In `manifest.sh`: add a `tool_meta` case (its `KIND`, `REPO`, URL template, method, version-var name, extract target) and a `tool_arch` mapping, then add the tool name to `ALL_TOOLS`.
-2. In `versions.lock`: add its `KEY=VERSION` line (or just run `just lock`).
-3. In `Dockerfile.tooling`: add `RUN install-tool <tool>` in the correct section. `deb` tools run as root; `tar`/`zip` tools run as `$USERNAME` (they install into that user's `~/.local/bin`).
+## What is deliberately not on mise
+
+Base OS utilities stay on apt, the agent CLIs stay on npm, and ruff/oci-cli stay
+on uv. See [brew-research.md](brew-research.md) for the per-ecosystem reasoning;
+mise owns the languages and the version-pinned-binary niche, which is where it
+fits best.

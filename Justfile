@@ -58,18 +58,14 @@ pull:
 # Versions
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Resolve the latest upstream versions of the binary tools and rewrite versions.lock.
-# Manual maintenance step; review the diff and commit. Requires curl + jq.
-lock:
-    bash scripts/versions/resolve.sh
+# Tool and language versions are pinned in mise.toml (single source of truth).
+# To bump: edit the version in mise.toml, then rebuild. See docs/version-management.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Image builds
 # ──────────────────────────────────────────────────────────────────────────────
 
 TZ := env("TZ", "Europe/Amsterdam")
-PNPM_COREPACK_VERSION := env("PNPM_COREPACK_VERSION", "11.0.9")
-YARN_COREPACK_VERSION := env("YARN_COREPACK_VERSION", "4.14.1")
 VERSION := "local"
 SSH_CONFIG_FILE := "config/.ssh/config"
 
@@ -94,8 +90,6 @@ build-base:
     docker build \
         "${SECRET_ARGS[@]}" \
         --build-arg TZ="{{ TZ }}" \
-        --build-arg PNPM_COREPACK_VERSION="{{ PNPM_COREPACK_VERSION }}" \
-        --build-arg YARN_COREPACK_VERSION="{{ YARN_COREPACK_VERSION }}" \
         --build-arg IMAGE_VERSION="{{ VERSION }}-$(date +%Y%m%d%H%M%S)" \
         --tag "{{ IMAGE_BASE }}:{{ VERSION }}" \
         --tag "{{ IMAGE_BASE }}:latest" \
