@@ -5,30 +5,14 @@
 # Codex, Gemini, OpenCode, Duo) live in Dockerfile.node; only installers that are not
 # npm packages live here, so an agent-CLI bump that only touches this layer does not
 # rebuild the layers below.
+
 ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python:latest
 FROM ${BASE_IMAGE}
 
 # Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
 ARG USERNAME=node
 
-# Numeric uid/gid for `--mount=type=cache,uid=,gid=` below — must match the non-root user.
-ARG USER_UID=1000
-ARG USER_GID=1000
-
-# Automatically set by BuildKit for multi-platform builds; used to scope apt caches per arch.
-ARG TARGETARCH
-
-# ----- Root: sandbox runtime system deps -----
-USER root
-
-# Claude Code sandbox runtime: apt sandbox deps (bubblewrap/socat/seccomp) as root.
-# The sandbox-runtime npm package itself is installed in Dockerfile.node; these are the
-# system deps it needs, kept here next to the Claude Code CLI that drives them.
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    apt-get update && apt-get install -y bubblewrap socat seccomp
-
-# ----- User: script-based AI installers and agent config -----
+# ----- Script-based AI installers and agent config -----
 USER $USERNAME
 
 # Install Claude Code CLI official installation script

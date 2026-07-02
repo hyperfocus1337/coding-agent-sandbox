@@ -49,8 +49,15 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 # curl/script-based agent installers (Claude Code, Tessl, herdr, apm) are in
 # Dockerfile.agent instead.
 
-# Claude Code sandbox runtime (npm). System deps (bubblewrap/socat/seccomp) are
-# installed as root in Dockerfile.agent, alongside the Claude Code CLI that uses them.
+# Sandbox runtime system deps (bubblewrap/socat/seccomp) as root, next to the
+# @anthropic-ai/sandbox-runtime npm package below that drives them.
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    apt-get update && apt-get install -y bubblewrap socat seccomp
+USER $USERNAME
+
+# Claude Code sandbox runtime (npm). System deps installed as root just above.
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g @anthropic-ai/sandbox-runtime
 

@@ -32,6 +32,16 @@ RUN uv tool install ruff
 # Config file: ~/.oci/config — must be configured (e.g. `oci setup config`) before usage is enabled.
 RUN uv tool install oci-cli
 
+# Python tooling via uv tool install — each lands in an isolated venv, entry points in UV_TOOL_BIN_DIR.
+# ast-grep ships on PyPI as `ast-grep-cli` (binaries `ast-grep`/`sg`); python-gitlab ships the `gitlab` CLI.
+# pytest/pyright/pyrefly/semgrep expose their own entry points.
+RUN uv tool install ast-grep-cli && \
+    uv tool install pyright && \
+    uv tool install pytest && \
+    uv tool install pyrefly && \
+    uv tool install python-gitlab && \
+    uv tool install semgrep
+
 # ===== Playwright (merged from the former Dockerfile.playwright layer) =====
 
 # Python image ends as non-root; Playwright install-deps uses sudo when not root, which fails in `docker build`.
