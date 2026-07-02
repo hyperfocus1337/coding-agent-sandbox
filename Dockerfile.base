@@ -68,11 +68,6 @@ ENV PATH="/usr/local/share/mise/shims:$PATH"
 RUN mkdir -p /usr/local/share/npm-global /usr/local/share/mise && \
     chown -R $USERNAME:$USERNAME /usr/local/share
 
-# mise's global config: the committed mise.toml is the single source of truth for
-# every tool/language version across all layers. Each layer runs `mise install
-# <subset>` and reads the pins from here. Bump a version by editing mise.toml.
-COPY --chown=$USERNAME:$USERNAME mise.toml /usr/local/share/mise/config.toml
-
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
 
@@ -86,10 +81,6 @@ RUN mkdir -p /workspace \
     /home/$USERNAME/.cursor-server
 
 WORKDIR /workspaces
-
-# Image version stamp for home-dir initialization tracking (written before USER switch)
-ARG IMAGE_VERSION
-RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
 
 # Sudo + optional login password for ad-hoc root installs (`sudo apt install …`).
 # The official node image does not put `node` in the sudo group or set a password.
@@ -121,6 +112,12 @@ ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
 ENV PATH="/usr/local/share/npm-global/bin:$PATH"
 
+# mise's global config: the committed mise.toml is the single source of truth for
+# every tool/language version across all layers. Each layer runs `mise install
+# <subset>` and reads the pins from here. Bump a version by editing mise.toml. COPY'd
+# late so a version bump invalidates as little of this layer, and nothing earlier, as possible.
+COPY --chown=$USERNAME:$USERNAME mise.toml /usr/local/share/mise/config.toml
+
 # Shell/prompt + data tooling via mise (installed as $USERNAME so they land in the
 # user-owned MISE_DATA_DIR). Versions come from mise.toml COPY'd above. Node/pnpm/yarn
 # now live in Dockerfile.node (the next layer); the NPM_CONFIG_PREFIX + PATH env above is
@@ -145,6 +142,14 @@ RUN --mount=type=secret,id=ssh_config,required=false,uid=${USER_UID},gid=${USER_
     cp /run/secrets/ssh_config /home/$USERNAME/.ssh/config && \
     chmod 600 /home/$USERNAME/.ssh/config; \
     fi
+
+# Image version stamp for home-dir initialization tracking. Written last (as root, via
+# a brief USER flip) so the ever-changing IMAGE_VERSION only invalidates this tiny layer,
+# leaving the apt/mise/config work above cached across version-only rebuilds.
+ARG IMAGE_VERSION
+USER root
+RUN echo "${IMAGE_VERSION:-unversioned}" > /opt/.devcontainer-version
+USER $USERNAME
 
 # Default command: fish login shell. Use CMD (not ENTRYPOINT) so devcontainer's
 # compose `command:` (e.g. `sleep infinity`) replaces it cleanly. With ENTRYPOINT,
