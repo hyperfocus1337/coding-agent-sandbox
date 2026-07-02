@@ -21,7 +21,11 @@ ARG TARGETARCH
 RUN groupadd --gid "$USER_GID" "$USERNAME" \
     && useradd --uid "$USER_UID" --gid "$USER_GID" --create-home --shell /bin/bash "$USERNAME"
 
-# Install basic development tools
+# Minimal shell + OS baseline. Only what the base's own steps and shell need: the
+# fish login shell, git/curl/ca-certificates/gnupg for repos and apt keyrings,
+# openssh-client for the ssh-keyscan below, neovim/direnv/fzf for the shell, plus
+# sudo/less/procps/unzip. The AI-agent CLI toolkit and other developer utilities
+# live in Dockerfile.tooling so this layer stays a lean baseline.
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -31,53 +35,19 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     sudo \
     fzf \
     fish \
-    man-db \
     unzip \
     ca-certificates \
     curl \
     gnupg \
     gnupg2 \
-    wget \
-    dnsutils \
-    jq \
-    tree \
     neovim \
     direnv \
-    openssh-client \
-    postgresql-client
-
-# Tools commonly invoked by AI coding agents. Pinned here so they are always
-# present regardless of what the base image ships. See README.md
-# ("apt packages") for the per-package breakdown. fd-find/bat install under
-# Debian-specific binary names (fdfind/batcat); the symlinks expose fd/bat.
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-    ripgrep \
-    fd-find \
-    bat \
-    shellcheck \
-    universal-ctags \
-    patch \
-    patchutils \
-    miller \
-    csvkit \
-    httpie \
-    netcat-openbsd \
-    socat \
-    lsof \
-    file \
-    moreutils \
-    ncdu \
-    strace \
-    rsync && \
-    ln -s "$(command -v fdfind)" /usr/local/bin/fd && \
-    ln -s "$(command -v batcat)" /usr/local/bin/bat
+    openssh-client
 
 # mise: polyglot runtime + tool manager. Installs node/python and the pinned
 # release binaries (yq, starship, git-delta, just, terraform, …) in later steps
-# and layers, replacing the old per-tool installers. extrepo is the Debian-blessed
-# way to enable the upstream apt repo; it (and its deps) are dropped afterwards.
+# and layers. extrepo is the Debian-blessed way to enable the upstream apt repo;
+# it (and its deps) are dropped afterwards.
 # https://github.com/jdx/mise/blob/main/docs/mise-cookbook/docker.md
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
