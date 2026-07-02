@@ -9,8 +9,7 @@ ARG USERNAME=node
 
 # Python + uv via mise (installed as $USERNAME into the user-owned MISE_DATA_DIR).
 # Versions come from the mise.toml baked into the base image. mise's standalone
-# Python build bundles pip and venv, so no apt python3 is needed; uv replaces the
-# copy from the astral image.
+# Python build bundles pip and venv, so no apt python3 is needed.
 RUN mise install python uv
 
 # Land any future `uv tool install` calls in ~/.local/bin (writable by $USERNAME, already on PATH
