@@ -1,0 +1,61 @@
+# Building the images
+
+Run `just` from the **repository root** (where `Dockerfile.base` and `Justfile` live).
+
+## Build everything
+
+```bash
+just build
+```
+
+This runs **`build-base`** → **`build-node`** → **`build-tooling`** → **`build-python`** → **`build-agent`**, producing five images tagged with `VERSION` (default `local`) and `latest`:
+
+- `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:{VERSION,latest}`
+- `…/devcontainer-node:{VERSION,latest}`
+- `…/devcontainer-tooling:{VERSION,latest}`
+- `…/devcontainer-python:{VERSION,latest}`
+- `…/devcontainer-agent:{VERSION,latest}`
+
+## Building a single layer
+
+Use **`just build-base`**, **`just build-node`**, **`just build-tooling`**, **`just build-python`**, or **`just build-agent`** alone when you only need one layer (for example, after pulling a published parent from GHCR).
+
+## Selecting the base image
+
+`Dockerfile.node`, `Dockerfile.tooling`, `Dockerfile.python`, and `Dockerfile.agent` accept **`BASE_IMAGE`** (must match the layer you extend). The recipes wire each child to the prior layer's `:latest` tag locally so overrides to `IMAGE_BASE`/`IMAGE_NODE`/`IMAGE_TOOLING`/`IMAGE_PYTHON` still stack.
+
+## Tool and language versions
+
+Languages (Node, Python), package managers (pnpm, yarn, uv), and the pinned release binaries (git-delta, glab, just, just-lsp, terraform, yq, starship) are all installed and version-pinned via [mise](https://github.com/jdx/mise). Every version lives in one file, [`mise.toml`](../mise.toml) at the repo root, which is COPY'd into the base image as mise's global config; each layer installs its subset with `mise install`. To bump a version, edit `mise.toml` and rebuild. See [version-management.md](version-management.md) for the per-layer breakdown, backends, and adding tools.
+
+## GitHub Actions builds
+
+In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), five independent jobs (`build-base`, `build-node`, `build-tooling`, `build-python`, `build-agent`) each build and push their own image to GHCR with metadata-driven tags (branch, PR, semver, SHA, `latest` on the default branch). Each job is a separate runner: `devcontainer-base` is pushed and pullable the moment its job finishes, regardless of whether the downstream `node`/`tooling`/`python`/`agent` jobs are still running or have failed. Downstream jobs pin **`BASE_IMAGE`** to the upstream **digest** so child images match exactly. On **pull requests** images are not pushed, so the downstream jobs fall back to the parent's `:latest` tag on GHCR for Dockerfile validation.
+
+Tool and language versions are not build-args: they are pinned in `mise.toml` and installed per layer with `mise install` (see [version-management.md](version-management.md)).
+
+## SSH client config
+
+SSH client config uses the optional BuildKit secret `ssh_config` (same mechanism locally and in GitHub Actions: repo secret `SSH_CONFIG` → `secret-files`). If the secret is missing or empty, the image is built without `~/.ssh/config` (known_hosts for `github.com` is still added).
+
+## Overridable variables
+
+The following variables can be overridden at invocation time (see the `Justfile` for the full list):
+
+| Variable             | Default                                                            | Description                                                                                                                                                          |
+|----------------------|--------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `TZ`                 | `Europe/Amsterdam` (or `$TZ` from the environment)                 | Timezone baked into the image                                                                                                                                        |
+| `IMAGE_BASE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`    | Registry/repository path for the base image (`Dockerfile.base`)                                                                                                      |
+| `IMAGE_NODE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node`    | Registry/repository path for the Node child image (`Dockerfile.node`)                                                                                                |
+| `IMAGE_TOOLING`      | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling` | Registry/repository path for the tooling child image (`Dockerfile.tooling`)                                                                                          |
+| `IMAGE_PYTHON`       | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python`  | Registry/repository path for the Python + Playwright child image (`Dockerfile.python`)                                                                               |
+| `IMAGE_AGENT`        | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent`   | Registry/repository path for the agent top image (`Dockerfile.agent`)                                                                                                |
+| `VERSION`            | `local`                                                            | Primary image tag for **all five** images (also written into `IMAGE_VERSION` for the base image stamp)                                                               |
+| `SUDO_PASSWORD_FILE` | `config/.sudo-password`                                            | Optional one-line disposable password file; passed as secret `container_user_password` so it does **not** land in image history                                      |
+| `SSH_CONFIG_FILE`    | `config/.ssh/config`                                               | If this path exists and is non-empty, it is passed as secret `ssh_config`; otherwise the build skips SSH client config (mirrors unset/empty `SSH_CONFIG` in Actions) |
+
+Example, override the timezone:
+
+```bash
+just TZ=UTC build
+```
