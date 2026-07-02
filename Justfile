@@ -47,6 +47,12 @@ cd PROJECT_NAME:
 claude PROJECT_NAME:
     docker exec -it {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions"
 
+# Runs extensions/install.sh from the coding-agent-config repo that config.sh clones at build.
+# Skipped during the image build (the ~/.claude dir is a mounted volume); run once the container is up.
+# Install agent extensions (Claude plugins/skills/MCP servers) in the running devcontainer.
+install-extensions:
+    docker exec -it {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Registry
 # ──────────────────────────────────────────────────────────────────────────────

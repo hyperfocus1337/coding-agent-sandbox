@@ -71,13 +71,13 @@ OS packages split across two layers: `Dockerfile.base` keeps a lean shell/OS bas
 
 ### Configuration and scripts
 
-| Path                       | Description                                                                                                        |
-|----------------------------|--------------------------------------------------------------------------------------------------------------------|
-| `.devcontainer/`           | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally).             |
-| `config/config.fish`       | Fish shell configuration (mise activation, Starship prompt, direnv hook, PATH).                                    |
-| `scripts/agents/config.sh` | Installs Claude Code plugins and MCP servers (Context7, Tessl, GitHub).                                            |
-| `scripts/agents/gemini.sh` | Gemini CLI extensions (CLI is installed in `Dockerfile.node`; this script is commented out in `Dockerfile.agent`). |
-| `Justfile`                 | Convenience commands for building the images and common container tasks.                                           |
+| Path                       | Description                                                                                                                                                                                          |
+|----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `.devcontainer/`           | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally).                                                                                               |
+| `config/config.fish`       | Fish shell configuration (mise activation, Starship prompt, direnv hook, PATH).                                                                                                                      |
+| `scripts/agents/config.sh` | Runs at build (`Dockerfile.agent`): clones the `coding-agent-config` repo and applies dotfiles via chezmoi. Extensions (plugins/skills/MCP) are installed at runtime with `just install-extensions`. |
+| `scripts/agents/gemini.sh` | Gemini CLI extensions (CLI is installed in `Dockerfile.node`; this script is commented out in `Dockerfile.agent`).                                                                                   |
+| `Justfile`                 | Convenience commands for building the images and common container tasks.                                                                                                                             |
 
 ### Docs and version pinning
 
@@ -158,9 +158,19 @@ Example — override the timezone:
 just TZ=UTC build
 ```
 
+### Agent extensions
+
+`scripts/agents/config.sh` runs during the build (`Dockerfile.agent`) and applies dotfiles via chezmoi from the `coding-agent-config` repo it clones to `~/repositories/coding-agent-config`. Installing the Claude Code extensions (plugins, skills, MCP servers) is deferred to runtime, because `~/.claude` is a mounted volume that is empty until the container is up. Run it once the container is running:
+
+```bash
+just install-extensions
+```
+
+This execs `extensions/install.sh` from that cloned repo inside the running container.
+
 ### Sudo password for ad-hoc package installs
 
-The base Node image does not put `node` in the `sudo` group or set a login password. The image adds `node` to `sudo` and, if BuildKit secret `container_user_password` is provided (`just build` forwards `SUDO_PASSWORD_FILE` when that path exists), sets a disposable login password via `chpasswd`.
+The base image does not put `node` in the `sudo` group or set a login password. The image adds `node` to `sudo` and, if BuildKit secret `container_user_password` is provided (`just build` forwards `SUDO_PASSWORD_FILE` when that path exists), sets a disposable login password via `chpasswd`.
 
 #### Setting the password
 
