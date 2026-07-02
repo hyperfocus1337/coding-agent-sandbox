@@ -43,6 +43,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     tree \
     neovim \
     direnv \
+    openssh-client \
     postgresql-client
 
 # Tools commonly invoked by AI coding agents. Pinned here so they are always
