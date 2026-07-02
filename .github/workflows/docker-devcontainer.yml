@@ -9,7 +9,6 @@ on:
       - Dockerfile.node
       - Dockerfile.tooling
       - Dockerfile.python
-      - Dockerfile.playwright
       - Dockerfile.agent
       - mise.toml
       - config/*
@@ -21,7 +20,6 @@ on:
       - Dockerfile.node
       - Dockerfile.tooling
       - Dockerfile.python
-      - Dockerfile.playwright
       - Dockerfile.agent
       - mise.toml
       - config/*
@@ -255,6 +253,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Python now carries the Playwright browser stack (Chromium + system deps) built for
+      # both arches (arm64 under QEMU), which overruns ubuntu-latest's ~14GB free (ENOSPC).
+      # Reclaim ~20-30GB by dropping preinstalled toolchains this image does not need.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -298,98 +309,18 @@ jobs:
           cache-from: type=gha,scope=python
           cache-to: type=gha,mode=max,scope=python
 
-  build-playwright:
+  build-agent:
     needs: build-python
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Playwright browser layer builds for both amd64 and arm64 (arm64 under QEMU) on one runner,
-      # which roughly doubles disk use and overruns the ~14GB free on ubuntu-latest (ENOSPC).
-      # Reclaim ~20-30GB by dropping preinstalled toolchains this image does not need.
-      # Source: https://github.com/jlumbroso/free-disk-space
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          swap-storage: true
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/devcontainer-playwright
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      # On non-PR builds pin BASE_IMAGE to the python digest from the upstream job; on PR fall back to :latest.
-      - name: Resolve playwright base image
-        id: pwbase
-        env:
-          DIGEST: ${{ needs.build-python.outputs.digest }}
-        run: |
-          repo="ghcr.io/${{ github.repository }}/devcontainer-python"
-          if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
-            echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
-          else
-            echo "base=${repo}:latest" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Build and push playwright
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.playwright
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            BASE_IMAGE=${{ steps.pwbase.outputs.base }}
-          cache-from: type=gha,scope=playwright
-          cache-to: type=gha,mode=max,scope=playwright
-
-  build-agent:
-    needs: build-playwright
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Agent builds on top of the heavy playwright image for both arches (arm64 under QEMU),
-      # so reclaim disk the same way the playwright job does to avoid ENOSPC.
+      # Agent builds on top of the heavy python image (which now carries the Playwright
+      # browser stack) for both arches (arm64 under QEMU), so reclaim disk to avoid ENOSPC.
       - name: Free disk space
         uses: jlumbroso/free-disk-space@main
         with:
@@ -433,13 +364,13 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # On non-PR builds pin BASE_IMAGE to the playwright digest from the upstream job; on PR fall back to :latest.
+      # On non-PR builds pin BASE_IMAGE to the python digest from the upstream job; on PR fall back to :latest.
       - name: Resolve agent base image
         id: agentbase
         env:
-          DIGEST: ${{ needs.build-playwright.outputs.digest }}
+          DIGEST: ${{ needs.build-python.outputs.digest }}
         run: |
-          repo="ghcr.io/${{ github.repository }}/devcontainer-playwright"
+          repo="ghcr.io/${{ github.repository }}/devcontainer-python"
           if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
             echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
           else

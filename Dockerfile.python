@@ -1,11 +1,16 @@
 # syntax=docker/dockerfile:1
-# Adds Python + uv on top of the tooling devcontainer image.
+# Adds Python + uv and the Playwright browser stack on top of the tooling devcontainer image.
 # Override BASE_IMAGE via `--build-arg` (Justfile/CI pin the tooling devcontainer).
 ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling:latest
 FROM ${BASE_IMAGE}
 
 # Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
 ARG USERNAME=node
+
+# Numeric uid/gid for the npm `--mount=type=cache` in the Playwright section — must match
+# the non-root user so npm cache writes are owned correctly.
+ARG USER_UID=1000
+ARG USER_GID=1000
 
 # Python + uv via mise (installed as $USERNAME into the user-owned MISE_DATA_DIR).
 # Versions come from the mise.toml baked into the base image. mise's standalone
@@ -26,3 +31,35 @@ RUN uv tool install ruff
 # https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm
 # Config file: ~/.oci/config — must be configured (e.g. `oci setup config`) before usage is enabled.
 RUN uv tool install oci-cli
+
+# ===== Playwright (merged from the former Dockerfile.playwright layer) =====
+
+# Python image ends as non-root; Playwright install-deps uses sudo when not root, which fails in `docker build`.
+USER root
+
+# Playwright: system deps + Chromium (root). PLAYWRIGHT_BROWSERS_PATH + chown so $USERNAME can run browsers.
+# Single `uv run` so the ephemeral playwright env is resolved once (not per subcommand), with a
+# build cache mount for uv so the driver/node download is reused across builds and kept out of the
+# image layer. chown stays in the same RUN so the browser tree is written with final ownership and
+# never duplicated into a second layer. `--no-shell` skips the chromium-headless-shell build, halving
+# the browser download; drop it if headed Chromium is needed at runtime.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN --mount=type=cache,target=/root/.cache/uv \
+  mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
+  uv run --with playwright sh -c 'playwright install-deps && playwright install --no-shell chromium' && \
+  chown -R "$USERNAME:$USERNAME" "$PLAYWRIGHT_BROWSERS_PATH"
+
+USER ${USERNAME}
+
+# Install Microsoft Playwright agent CLI + skills bundle. Distinct from the `playwright`
+# browser package installed above — this is the agent-facing CLI from microsoft/playwright-cli.
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    cd "/home/$USERNAME" && \
+    npm install -g @playwright/cli@latest
+
+# CloakBrowser: stealth Chromium drop-in replacement for Playwright (CloakHQ/CloakBrowser).
+# Installed as a uv tool from PyPI with the [geoip] extra (geoip2 + socksio for proxy-IP
+# timezone/locale auto-detection). Entry points land in UV_TOOL_BIN_DIR. Library use at
+# runtime: `uv run --with 'cloakbrowser[geoip]' python ...`. Stealth Chromium binary
+# (~200MB) is fetched on first use into the per-user cloakbrowser cache, not here.
+# RUN uv tool install "cloakbrowser[geoip]"

@@ -39,7 +39,7 @@ If you ever drop VS Code / Cursor / Codespaces from the workflow, you can delete
 name: coding-agent-sandbox
 services:
   sandbox:
-    image: …/devcontainer-playwright:latest
+    image: …/devcontainer-agent:latest
     container_name: coding-agent-sandbox-devcontainer
     command: sleep infinity
     environment: { … }
@@ -99,7 +99,7 @@ docker exec coding-agent-sandbox-watchtower /watchtower --run-once  # quieter (i
 
 **`just update` looks idle but is working.** At default log level Watchtower prints only a few lines, then stays silent while it HEADs the registry and pulls a newer image (the Playwright stack is large — several minutes is normal). It does **not** stream Docker layer progress. `just update` passes `--debug` so you see lines like `Initiating image pull` / `Fetched remote digest` / `Digest mismatch`. The summary line `scanned=0 updated=0` means **zero containers were updated** (not “zero checked”); if the pull was skipped or interrupted you still get `updated=0`. A harmless warning about restart policy on the one-shot Watchtower container itself often appears at exit (`terminated signal received` while `--rm` tears down).
 
-For live pull progress, run `docker pull ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright:latest` in another terminal, then `just update` once the image is local.
+For live pull progress, run `docker pull ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent:latest` in another terminal, then `just update` once the image is local.
 
 Caveat: `sandbox` runs `command: sleep infinity`, so when Watchtower updates it the container is recreated and any attached IDE / devcontainer session drops. If that bites, remove the enable label from `sandbox` and update by hand, or widen `WATCHTOWER_POLL_INTERVAL`.
 

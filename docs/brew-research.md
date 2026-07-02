@@ -9,7 +9,7 @@
 > argued below. So the "keep on version scripts" recommendations in the tables
 > now read as "keep pinned via mise".
 
-This note records whether the packages installed across the four Dockerfiles ([Dockerfile.base](../Dockerfile.base), [Dockerfile.tooling](../Dockerfile.tooling), [Dockerfile.python](../Dockerfile.python), [Dockerfile.playwright](../Dockerfile.playwright)) could be installed through Homebrew for Linux instead of their current managers (apt, single-binary downloads, vendor install scripts, npm, and uv).
+This note records whether the packages installed across the Dockerfiles ([Dockerfile.base](../Dockerfile.base), [Dockerfile.node](../Dockerfile.node), [Dockerfile.tooling](../Dockerfile.tooling), [Dockerfile.python](../Dockerfile.python), [Dockerfile.agent](../Dockerfile.agent)) could be installed through Homebrew for Linux instead of their current managers (apt, single-binary downloads, vendor install scripts, npm, and uv).
 
 It started as a narrower question about the version-pinning scripts under [scripts/versions/](../scripts/versions/) (see [version-management.md](version-management.md)) and was widened to every package.
 

@@ -6,14 +6,13 @@ This directory defines a [Dev Container](https://containers.dev/) environment fo
 
 ### Images
 
-| Path                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Dockerfile.base`       | Base image on [`debian:trixie-slim`](https://hub.docker.com/_/debian) (Debian 13 stable). A lean shell/OS baseline only (fish, git, curl, gnupg, openssh-client, neovim, direnv, …; see [apt packages](#apt-packages)), then [mise](https://github.com/jdx/mise) installs yq and Starship. SSH + sudo bootstrap, default editor, permissions — **no Node, no developer tooling, no Python**. Consume this for a minimal shell baseline. |
-| `Dockerfile.node`       | Child image on top of `devcontainer-base`: Node + pnpm/yarn via mise, then **all** npm-global packages — JS dev tools (Prettier, markdownlint-cli2, ESLint, neonctl) and the npm-based AI CLIs (Anthropic sandbox-runtime, Codex, Gemini, OpenCode, GitLab Duo). `BASE_IMAGE` selects the base (default `…/devcontainer-base:latest`; CI pins digest after push).                                                                       |
-| `Dockerfile.tooling`    | Child image on top of `devcontainer-node`: the AI-agent CLI toolkit (ripgrep, fd, bat, …) plus general (non-node) developer tooling — GitHub CLI, GitLab CLI, OpenTofu, Azure/AWS CLIs, git-delta, `just`, just-lsp, chezmoi. `BASE_IMAGE` selects the base (default `…/devcontainer-node:latest`; CI pins digest after push).                                                                                                          |
-| `Dockerfile.python`     | Child image on top of `devcontainer-tooling`: adds Python + `uv` via mise. `BASE_IMAGE` selects the base (default `…/devcontainer-tooling:latest`; CI pins digest after push).                                                                                                                                                                                                                                                          |
-| `Dockerfile.playwright` | Child image on top of `devcontainer-python`: Playwright system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`). `BASE_IMAGE` selects the base (default `…/devcontainer-python:latest`; CI pins digest after push).                                                                                                                                                                                                        |
-| `Dockerfile.agent`      | Top image on top of `devcontainer-playwright`: script/curl-based AI agent installers (Claude Code, Tessl, herdr, apm), sandbox-runtime system deps, and agent config (Claude plugins/MCP via `scripts/agents/config.sh`). **This is the image the devcontainer runs.** `BASE_IMAGE` selects the base (default `…/devcontainer-playwright:latest`; CI pins digest after push).                                                           |
+| Path                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                             |
+|----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Dockerfile.base`    | Base image on [`debian:trixie-slim`](https://hub.docker.com/_/debian) (Debian 13 stable). A lean shell/OS baseline only (fish, git, curl, gnupg, openssh-client, neovim, direnv, …; see [apt packages](#apt-packages)), then [mise](https://github.com/jdx/mise) installs yq and Starship. SSH + sudo bootstrap, default editor, permissions — **no Node, no developer tooling, no Python**. Consume this for a minimal shell baseline. |
+| `Dockerfile.node`    | Child image on top of `devcontainer-base`: Node + pnpm/yarn via mise, then **all** npm-global packages — JS dev tools (Prettier, markdownlint-cli2, ESLint, neonctl) and the npm-based AI CLIs (Anthropic sandbox-runtime, Codex, Gemini, OpenCode, GitLab Duo). `BASE_IMAGE` selects the base (default `…/devcontainer-base:latest`; CI pins digest after push).                                                                       |
+| `Dockerfile.tooling` | Child image on top of `devcontainer-node`: the AI-agent CLI toolkit (ripgrep, fd, bat, …) plus general (non-node) developer tooling — GitHub CLI, GitLab CLI, OpenTofu, Azure/AWS CLIs, git-delta, `just`, just-lsp, chezmoi. `BASE_IMAGE` selects the base (default `…/devcontainer-node:latest`; CI pins digest after push).                                                                                                          |
+| `Dockerfile.python`  | Child image on top of `devcontainer-tooling`: adds Python + `uv` via mise, plus the Playwright browser stack — system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`) and the `@playwright/cli`. `BASE_IMAGE` selects the base (default `…/devcontainer-tooling:latest`; CI pins digest after push).                                                                                                                      |
+| `Dockerfile.agent`   | Top image on top of `devcontainer-python`: script/curl-based AI agent installers (Claude Code, Tessl, herdr, apm), sandbox-runtime system deps, and agent config (Claude plugins/MCP via `scripts/agents/config.sh`). **This is the image the devcontainer runs.** `BASE_IMAGE` selects the base (default `…/devcontainer-python:latest`; CI pins digest after push).                                                                   |
 
 ### apt packages
 
@@ -97,22 +96,21 @@ Run `just` from the **repository root** (where `Dockerfile.base` and `Justfile` 
 just build
 ```
 
-This runs **`build-base`** → **`build-node`** → **`build-tooling`** → **`build-python`** → **`build-playwright`** → **`build-agent`**, producing six images tagged with `VERSION` (default `local`) and `latest`:
+This runs **`build-base`** → **`build-node`** → **`build-tooling`** → **`build-python`** → **`build-agent`**, producing five images tagged with `VERSION` (default `local`) and `latest`:
 
 - `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:{VERSION,latest}`
 - `…/devcontainer-node:{VERSION,latest}`
 - `…/devcontainer-tooling:{VERSION,latest}`
 - `…/devcontainer-python:{VERSION,latest}`
-- `…/devcontainer-playwright:{VERSION,latest}`
 - `…/devcontainer-agent:{VERSION,latest}`
 
 #### Building a single layer
 
-Use **`just build-base`**, **`just build-node`**, **`just build-tooling`**, **`just build-python`**, **`just build-playwright`**, or **`just build-agent`** alone when you only need one layer (for example, after pulling a published parent from GHCR).
+Use **`just build-base`**, **`just build-node`**, **`just build-tooling`**, **`just build-python`**, or **`just build-agent`** alone when you only need one layer (for example, after pulling a published parent from GHCR).
 
 #### Selecting the base image
 
-`Dockerfile.node`, `Dockerfile.tooling`, `Dockerfile.python`, `Dockerfile.playwright`, and `Dockerfile.agent` accept **`BASE_IMAGE`** (must match the layer you extend). The recipes wire each child to the prior layer's `:latest` tag locally so overrides to `IMAGE_BASE`/`IMAGE_NODE`/`IMAGE_TOOLING`/`IMAGE_PYTHON`/`IMAGE_PLAYWRIGHT` still stack.
+`Dockerfile.node`, `Dockerfile.tooling`, `Dockerfile.python`, and `Dockerfile.agent` accept **`BASE_IMAGE`** (must match the layer you extend). The recipes wire each child to the prior layer's `:latest` tag locally so overrides to `IMAGE_BASE`/`IMAGE_NODE`/`IMAGE_TOOLING`/`IMAGE_PYTHON` still stack.
 
 #### Tool and language versions
 
@@ -127,7 +125,7 @@ breakdown, backends, and adding tools.
 
 #### GitHub Actions builds
 
-In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), six independent jobs (`build-base`, `build-node`, `build-tooling`, `build-python`, `build-playwright`, `build-agent`) each build and push their own image to GHCR with metadata-driven tags (branch, PR, semver, SHA, `latest` on the default branch). Each job is a separate runner — `devcontainer-base` is pushed and pullable the moment its job finishes, regardless of whether the downstream `node`/`tooling`/`python`/`playwright`/`agent` jobs are still running or have failed. Downstream jobs pin **`BASE_IMAGE`** to the upstream **digest** so child images match exactly. On **pull requests** images are not pushed, so the downstream jobs fall back to the parent's `:latest` tag on GHCR for Dockerfile validation.
+In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), five independent jobs (`build-base`, `build-node`, `build-tooling`, `build-python`, `build-agent`) each build and push their own image to GHCR with metadata-driven tags (branch, PR, semver, SHA, `latest` on the default branch). Each job is a separate runner — `devcontainer-base` is pushed and pullable the moment its job finishes, regardless of whether the downstream `node`/`tooling`/`python`/`agent` jobs are still running or have failed. Downstream jobs pin **`BASE_IMAGE`** to the upstream **digest** so child images match exactly. On **pull requests** images are not pushed, so the downstream jobs fall back to the parent's `:latest` tag on GHCR for Dockerfile validation.
 
 Tool and language versions are not build-args — they are pinned in `mise.toml` and installed per layer with `mise install` (see [docs/version-management.md](docs/version-management.md)).
 
@@ -139,18 +137,17 @@ SSH client config uses the optional BuildKit secret `ssh_config` (same mechanism
 
 The following variables can be overridden at invocation time (see the `Justfile` for the full list):
 
-| Variable             | Default                                                               | Description                                                                                                                                                          |
-|----------------------|-----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `TZ`                 | `Europe/Amsterdam` (or `$TZ` from the environment)                    | Timezone baked into the image                                                                                                                                        |
-| `IMAGE_BASE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`       | Registry/repository path for the base image (`Dockerfile.base`)                                                                                                      |
-| `IMAGE_NODE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node`       | Registry/repository path for the Node child image (`Dockerfile.node`)                                                                                                |
-| `IMAGE_TOOLING`      | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling`    | Registry/repository path for the tooling child image (`Dockerfile.tooling`)                                                                                          |
-| `IMAGE_PYTHON`       | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python`     | Registry/repository path for the Python child image (`Dockerfile.python`)                                                                                            |
-| `IMAGE_PLAYWRIGHT`   | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright` | Registry/repository path for the Playwright child image (`Dockerfile.playwright`)                                                                                    |
-| `IMAGE_AGENT`        | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent`      | Registry/repository path for the agent top image (`Dockerfile.agent`)                                                                                                |
-| `VERSION`            | `local`                                                               | Primary image tag for **all six** images (also written into `IMAGE_VERSION` for the base image stamp)                                                                |
-| `SUDO_PASSWORD_FILE` | `config/.sudo-password`                                               | Optional one-line disposable password file; passed as secret `container_user_password` so it does **not** land in image history                                      |
-| `SSH_CONFIG_FILE`    | `config/.ssh/config`                                                  | If this path exists and is non-empty, it is passed as secret `ssh_config`; otherwise the build skips SSH client config (mirrors unset/empty `SSH_CONFIG` in Actions) |
+| Variable             | Default                                                            | Description                                                                                                                                                          |
+|----------------------|--------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `TZ`                 | `Europe/Amsterdam` (or `$TZ` from the environment)                 | Timezone baked into the image                                                                                                                                        |
+| `IMAGE_BASE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`    | Registry/repository path for the base image (`Dockerfile.base`)                                                                                                      |
+| `IMAGE_NODE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node`    | Registry/repository path for the Node child image (`Dockerfile.node`)                                                                                                |
+| `IMAGE_TOOLING`      | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling` | Registry/repository path for the tooling child image (`Dockerfile.tooling`)                                                                                          |
+| `IMAGE_PYTHON`       | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python`  | Registry/repository path for the Python + Playwright child image (`Dockerfile.python`)                                                                               |
+| `IMAGE_AGENT`        | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent`   | Registry/repository path for the agent top image (`Dockerfile.agent`)                                                                                                |
+| `VERSION`            | `local`                                                            | Primary image tag for **all five** images (also written into `IMAGE_VERSION` for the base image stamp)                                                               |
+| `SUDO_PASSWORD_FILE` | `config/.sudo-password`                                            | Optional one-line disposable password file; passed as secret `container_user_password` so it does **not** land in image history                                      |
+| `SSH_CONFIG_FILE`    | `config/.ssh/config`                                               | If this path exists and is non-empty, it is passed as secret `ssh_config`; otherwise the build skips SSH client config (mirrors unset/empty `SSH_CONFIG` in Actions) |
 
 Example — override the timezone:
 

@@ -5,18 +5,16 @@
 # Running devcontainer container name. Used by both Container lifecycle and Shell access.
 CONTAINER := "coding-agent-sandbox-devcontainer"
 
-# Six-layer image chain: base -> node -> tooling -> python -> playwright -> agent.
+# Five-layer image chain: base -> node -> tooling -> python -> agent.
 # Each is published independently in CI. Used by both Registry (pull) and Image builds.
 IMAGE_BASE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base"
 # Adds Node + all npm-global packages (JS dev tools + npm-based AI CLIs) on top of base.
 IMAGE_NODE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node"
 # Adds general (non-node) developer tooling (gh, glab, tofu, cloud CLIs, git-delta, just, just-lsp, chezmoi) on top of node.
 IMAGE_TOOLING := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling"
-# Adds Python + uv on top of tooling.
+# Adds Python + uv and the Playwright browser stack (Chromium + system deps) on top of tooling.
 IMAGE_PYTHON := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python"
-# Adds Playwright (Chromium + system deps) on top of python.
-IMAGE_PLAYWRIGHT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright"
-# Adds script-based AI agent installers + agent config (Claude Code, Tessl, herdr, apm) on top of playwright. This is the image the devcontainer runs.
+# Adds script-based AI agent installers + agent config (Claude Code, Tessl, herdr, apm) on top of python. This is the image the devcontainer runs.
 IMAGE_AGENT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent"
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -63,7 +61,6 @@ pull:
     docker pull {{ IMAGE_NODE }}:latest
     docker pull {{ IMAGE_TOOLING }}:latest
     docker pull {{ IMAGE_PYTHON }}:latest
-    docker pull {{ IMAGE_PLAYWRIGHT }}:latest
     docker pull {{ IMAGE_AGENT }}:latest
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -126,7 +123,7 @@ build-tooling:
         --file Dockerfile.tooling \
         .
 
-# Python layer on top of {{ IMAGE_TOOLING }}:latest (run after build-tooling or publish of :latest).
+# Python + Playwright layer on top of {{ IMAGE_TOOLING }}:latest (run after build-tooling or publish of :latest).
 build-python:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_TOOLING }}:latest" \
@@ -135,26 +132,17 @@ build-python:
         --file Dockerfile.python \
         .
 
-# Playwright layer on top of {{ IMAGE_PYTHON }}:latest (run after build-python or publish of :latest).
-build-playwright:
-    docker build \
-        --build-arg BASE_IMAGE="{{ IMAGE_PYTHON }}:latest" \
-        --tag "{{ IMAGE_PLAYWRIGHT }}:{{ VERSION }}" \
-        --tag "{{ IMAGE_PLAYWRIGHT }}:latest" \
-        --file Dockerfile.playwright \
-        .
-
-# Agent layer on top of {{ IMAGE_PLAYWRIGHT }}:latest (top of chain; the image the devcontainer runs).
+# Agent layer on top of {{ IMAGE_PYTHON }}:latest (top of chain; the image the devcontainer runs).
 build-agent:
     docker build \
-        --build-arg BASE_IMAGE="{{ IMAGE_PLAYWRIGHT }}:latest" \
+        --build-arg BASE_IMAGE="{{ IMAGE_PYTHON }}:latest" \
         --tag "{{ IMAGE_AGENT }}:{{ VERSION }}" \
         --tag "{{ IMAGE_AGENT }}:latest" \
         --file Dockerfile.agent \
         .
 
-# Build all six images (base -> node -> tooling -> python -> playwright -> agent).
-build: build-base build-node build-tooling build-python build-playwright build-agent
+# Build all five images (base -> node -> tooling -> python -> agent).
+build: build-base build-node build-tooling build-python build-agent
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Container lifecycle

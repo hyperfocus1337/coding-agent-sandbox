@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
 # Top layer: script/curl-based AI agent installers + agent config, on top of the
-# playwright devcontainer image. This is the image the devcontainer runs. The npm-based
-# agent CLIs (sandbox-runtime, Codex, Gemini, OpenCode, Duo) live in Dockerfile.node;
-# only installers that are not npm packages live here, so an agent-CLI bump that only
-# touches this layer does not rebuild the layers below.
-ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright:latest
+# python devcontainer image (which now also carries the Playwright browser stack).
+# This is the image the devcontainer runs. The npm-based agent CLIs (sandbox-runtime,
+# Codex, Gemini, OpenCode, Duo) live in Dockerfile.node; only installers that are not
+# npm packages live here, so an agent-CLI bump that only touches this layer does not
+# rebuild the layers below.
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python:latest
 FROM ${BASE_IMAGE}
 
 # Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.

@@ -6,8 +6,7 @@
 #   Dockerfile.base       -> yq, starship
 #   Dockerfile.node       -> node, pnpm, yarn
 #   Dockerfile.tooling    -> glab, just, terraform, git-delta (aqua:dandavison/delta), just-lsp
-#   Dockerfile.python     -> python, uv
-#   Dockerfile.playwright -> (none; Chromium via `uv run`, @playwright/cli via npm)
+#   Dockerfile.python     -> python, uv (also installs Chromium via `uv run`, @playwright/cli via npm; not mise)
 #   Dockerfile.agent      -> (none; script/curl-based AI installers)
 #
 # `mise registry` lists the short names; tools not in the registry use an
