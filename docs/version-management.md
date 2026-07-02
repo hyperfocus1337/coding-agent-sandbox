@@ -26,7 +26,8 @@ subset with `mise install <tools>`, reading the pins from that config:
 
 | Layer                | `mise install …`                                     |
 |----------------------|------------------------------------------------------|
-| `Dockerfile.base`    | `node`, `pnpm`, `yarn`, `yq`, `starship`             |
+| `Dockerfile.base`    | `yq`, `starship`                                     |
+| `Dockerfile.node`    | `node`, `pnpm`, `yarn`                               |
 | `Dockerfile.tooling` | `glab`, `just`, `terraform`, `git-delta`, `just-lsp` |
 | `Dockerfile.python`  | `python`, `uv`                                       |
 
@@ -63,7 +64,8 @@ available. Update `mise.toml` to match, then rebuild.
 
 **Add a new tool.** Add a `<tool> = "<version>"` line to `mise.toml`, then add
 the tool name to the `mise install …` call in the appropriate layer (base for
-languages/prompt tools, tooling for dev binaries, python for Python tooling). If
+prompt/data tools, node for Node runtimes, tooling for dev binaries, python for
+Python tooling). If
 the short name is not in the registry, use an explicit backend as the key
 (`"aqua:owner/repo"`, `"ubi:owner/repo"`, `github:`, `gitlab:`).
 

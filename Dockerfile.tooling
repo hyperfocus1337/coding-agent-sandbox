@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1
-# Adds developer + AI tooling on top of the base devcontainer image.
-# General developer tooling (GitHub CLI, GitLab CLI, git-delta, just, just-lsp) is installed
-# first, then AI tooling (sandbox-runtime, Claude Code, Codex, Gemini, OpenCode,
-# Tessl, plugins).
-ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:latest
+# Adds general (non-node) developer tooling on top of the node devcontainer image:
+# GitHub CLI, GitLab CLI, OpenTofu, cloud CLIs (Azure/AWS), git-delta, just, just-lsp,
+# chezmoi. Node packages live in Dockerfile.node; AI agent installers in Dockerfile.agent.
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node:latest
 FROM ${BASE_IMAGE}
 
 # Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
@@ -77,32 +76,14 @@ RUN ARCH=$(uname -m) && \
     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip" -o /tmp/awscliv2.zip && \
     unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install && rm -rf /tmp/awscliv2.zip /tmp/aws
 
-# ----- User: user-local binaries (~/.local/bin) and npm globals -----
+# ----- User: user-local binaries (~/.local/bin) -----
 USER $USERNAME
 
-# Pinned release binaries via mise, replacing the old versions.lock installer.
-# Versions come from the mise.toml baked into the base image. Short names resolve
-# through mise's registry; git-delta uses its explicit aqua backend and just-lsp
-# (not in the registry) uses the ubi GitHub-release backend, which downloads +
-# extracts the release binary just as the old install.sh did.
+# Pinned release binaries via mise. Versions come from the mise.toml baked into the
+# base image. Short names resolve through mise's registry; git-delta uses its explicit
+# aqua backend and just-lsp (not in the registry) uses the ubi GitHub-release backend,
+# which downloads + extracts the release binary.
 RUN mise install glab just terraform aqua:dandavison/delta ubi:terror/just-lsp
-
-# Prettier code formatter
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g prettier
-
-# Markdownlint CLI v2
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g markdownlint-cli2
-
-# ESLint (JavaScript/TypeScript linter)
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g eslint
-
-# Neon CLI (neonctl): manage Neon serverless Postgres projects/branches.
-# https://neon.com/docs/reference/neon-cli
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g neonctl
 
 # GitHub Stacked PRs (gh stack) extension: break large changes into small, stacked PRs.
 # Installs into the user-owned gh extension dir (~/.local/share/gh). Requires the gh CLI above.
@@ -113,72 +94,3 @@ RUN gh extension install github/gh-stack
 # the user-local bin dir already on PATH.
 # https://www.chezmoi.io/install/
 RUN sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "$HOME/.local/bin"
-
-# ===== AI tooling =====
-
-# ----- Root: sandbox runtime system deps -----
-USER root
-
-# Claude Code sandbox runtime: apt sandbox deps (bubblewrap/socat/seccomp) as root.
-# The npm CLI itself is installed below as $USERNAME so it writes into the user-owned
-# npm-global prefix (running it as root would create root-owned subdirs under
-# NPM_CONFIG_PREFIX and break subsequent user-side `npm install -g`).
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    apt-get update && apt-get install -y bubblewrap socat seccomp
-
-# ----- User: AI CLIs and agent config -----
-USER $USERNAME
-
-# Claude Code sandbox runtime (npm).
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g @anthropic-ai/sandbox-runtime
-
-# Install Claude Code CLI official installation script
-# https://code.claude.com/docs/en/setup
-RUN curl -fsSL https://claude.ai/install.sh | bash
-
-# Install Codex CLI
-# https://developers.openai.com/codex/cli
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g @openai/codex
-
-# Install Gemini CLI
-# https://geminicli.com/docs/get-started/installation/
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g @google/gemini-cli
-
-# Install OpenCode
-# https://opencode.ai/docs/
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g opencode-ai
-
-# Install GitLab Duo CLI
-# https://docs.gitlab.com/user/gitlab_duo_cli/
-RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
-    npm install -g @gitlab/duo-cli
-
-# Install Tessl CLI
-RUN curl -fsSL https://get.tessl.io | sh
-
-# Install herdr CLI
-# https://herdr.dev/docs/install/
-RUN curl -fsSL https://herdr.dev/install.sh | sh && \
-    herdr integration install claude && \
-    herdr integration install opencode
-
-# Install Agent Package Manager (apm)
-# https://microsoft.github.io/apm/
-RUN curl -sSL https://aka.ms/apm-unix | APM_INSTALL_DIR="$HOME/.local/bin" sh
-
-# Personal Git identity (gitignored, not committed). Provide config/.gitconfig locally before building.
-COPY --chown=$USERNAME:$USERNAME config/.gitconfig /home/$USERNAME/.gitconfig
-
-# Agent helper scripts (config.sh installs Claude Code plugins/MCP servers via the CLI installed above).
-COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
-
-# Install agent dependencies
-RUN bash /home/$USERNAME/scripts/agents/config.sh
-
-# Install Gemini extensions
-# RUN bash /home/$USERNAME/scripts/agents/gemini.sh

@@ -2,7 +2,7 @@ name: coding-agent-sandbox
 
 services:
   sandbox:
-    image: ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright:latest
+    image: ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent:latest
     container_name: coding-agent-sandbox-devcontainer
     command: sleep infinity
     environment:

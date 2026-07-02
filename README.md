@@ -6,72 +6,78 @@ This directory defines a [Dev Container](https://containers.dev/) environment fo
 
 ### Images
 
-| Path                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Dockerfile.base`       | Base image on [`debian:trixie-slim`](https://hub.docker.com/_/debian) (Debian 13 stable). OS apt packages (baseline shell/dev tools plus an AI-agent CLI toolkit — ripgrep, fd, bat, …; see [apt packages](#apt-packages-dockerfilebase)), then [mise](https://github.com/jdx/mise) installs Node + pnpm/yarn, yq, and Starship. SSH + sudo bootstrap, default editor, permissions — **no developer tooling, no Python**. Consume this for a minimal Node + shell baseline. |
-| `Dockerfile.tooling`    | Child image on top of `devcontainer-base`: general developer tooling (GitHub CLI, git-delta, `just`, just-lsp) then AI tooling (Anthropic sandbox-runtime, Claude Code, Codex, Gemini, OpenCode, Tessl, Claude plugins/MCP). `BASE_IMAGE` selects the base (default `…/devcontainer-base:latest`; CI pins digest after push).                                                                                                                                               |
-| `Dockerfile.python`     | Child image on top of `devcontainer-tooling`: adds Python + `uv` via mise. `BASE_IMAGE` selects the base (default `…/devcontainer-tooling:latest`; CI pins digest after push).                                                                                                                                                                                                                                                                                              |
-| `Dockerfile.playwright` | Child image on top of `devcontainer-python`: Playwright system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`). `BASE_IMAGE` selects the base (default `…/devcontainer-python:latest`; CI pins digest after push).                                                                                                                                                                                                                                            |
+| Path                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                             |
+|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Dockerfile.base`       | Base image on [`debian:trixie-slim`](https://hub.docker.com/_/debian) (Debian 13 stable). A lean shell/OS baseline only (fish, git, curl, gnupg, openssh-client, neovim, direnv, …; see [apt packages](#apt-packages)), then [mise](https://github.com/jdx/mise) installs yq and Starship. SSH + sudo bootstrap, default editor, permissions — **no Node, no developer tooling, no Python**. Consume this for a minimal shell baseline. |
+| `Dockerfile.node`       | Child image on top of `devcontainer-base`: Node + pnpm/yarn via mise, then **all** npm-global packages — JS dev tools (Prettier, markdownlint-cli2, ESLint, neonctl) and the npm-based AI CLIs (Anthropic sandbox-runtime, Codex, Gemini, OpenCode, GitLab Duo). `BASE_IMAGE` selects the base (default `…/devcontainer-base:latest`; CI pins digest after push).                                                                       |
+| `Dockerfile.tooling`    | Child image on top of `devcontainer-node`: the AI-agent CLI toolkit (ripgrep, fd, bat, …) plus general (non-node) developer tooling — GitHub CLI, GitLab CLI, OpenTofu, Azure/AWS CLIs, git-delta, `just`, just-lsp, chezmoi. `BASE_IMAGE` selects the base (default `…/devcontainer-node:latest`; CI pins digest after push).                                                                                                          |
+| `Dockerfile.python`     | Child image on top of `devcontainer-tooling`: adds Python + `uv` via mise. `BASE_IMAGE` selects the base (default `…/devcontainer-tooling:latest`; CI pins digest after push).                                                                                                                                                                                                                                                          |
+| `Dockerfile.playwright` | Child image on top of `devcontainer-python`: Playwright system deps and Chromium (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`). `BASE_IMAGE` selects the base (default `…/devcontainer-python:latest`; CI pins digest after push).                                                                                                                                                                                                        |
+| `Dockerfile.agent`      | Top image on top of `devcontainer-playwright`: script/curl-based AI agent installers (Claude Code, Tessl, herdr, apm), sandbox-runtime system deps, and agent config (Claude plugins/MCP via `scripts/agents/config.sh`). **This is the image the devcontainer runs.** `BASE_IMAGE` selects the base (default `…/devcontainer-playwright:latest`; CI pins digest after push).                                                           |
 
-### apt packages (`Dockerfile.base`)
+### apt packages
 
-`Dockerfile.base` installs OS packages in two logical `apt-get` blocks. Grouping lives here in the docs, not in extra Docker layers: each block is one layer + one `apt-get update`, and the more frequently edited AI-agent block sits last so changing it never rebuilds the baseline layer.
+OS packages split across two layers: `Dockerfile.base` keeps a lean shell/OS baseline, and `Dockerfile.tooling` adds the AI-agent CLI toolkit and other developer utilities. The final `devcontainer-agent` image contains both.
 
-**Baseline** — general shell + dev essentials:
+**Baseline** (`Dockerfile.base`) — only what the base's own build steps and the shell need:
 
-| Package             | Provides          | Purpose                                          |
-|---------------------|-------------------|--------------------------------------------------|
-| `less`              |                   | pager                                            |
-| `git`               |                   | version control                                  |
-| `procps`            | `ps`, `top`       | process inspection                               |
-| `sudo`              |                   | privilege escalation (see sudo password section) |
-| `fzf`               |                   | fuzzy finder                                     |
-| `fish`              |                   | default interactive shell                        |
-| `man-db`            | `man`             | manual pages                                     |
-| `unzip`             |                   | archive extraction                               |
-| `ca-certificates`   |                   | TLS root certs                                   |
-| `curl` / `wget`     |                   | HTTP download                                    |
-| `gnupg` / `gnupg2`  | `gpg`             | signature/key handling                           |
-| `dnsutils`          | `dig`, `nslookup` | DNS debugging                                    |
-| `jq`                |                   | JSON processor                                   |
-| `tree`              |                   | directory tree view                              |
-| `neovim`            | `nvim`            | default editor (`EDITOR`/`VISUAL`)               |
-| `direnv`            |                   | per-directory env loading                        |
-| `postgresql-client` | `psql`            | Postgres CLI                                     |
+| Package            | Provides    | Purpose                                           |
+|--------------------|-------------|---------------------------------------------------|
+| `less`             |             | pager                                             |
+| `git`              |             | version control                                   |
+| `procps`           | `ps`, `top` | process inspection                                |
+| `sudo`             |             | privilege escalation (see sudo password section)  |
+| `fzf`              |             | fuzzy finder                                      |
+| `fish`             |             | default interactive shell                         |
+| `unzip`            |             | archive extraction                                |
+| `ca-certificates`  |             | TLS root certs                                    |
+| `curl`             |             | HTTP download (mise/extrepo, vendor installers)   |
+| `gnupg` / `gnupg2` | `gpg`       | signature/key handling for apt keyrings           |
+| `neovim`           | `nvim`      | default editor (`EDITOR`/`VISUAL`)                |
+| `direnv`           |             | per-directory env loading                         |
+| `openssh-client`   | `ssh`       | `ssh-keyscan` for the SSH bootstrap; git over SSH |
 
-**AI-agent tooling** — utilities coding agents shell out to, pinned so they are always present:
+`yq` and `starship` are also installed in the base image, via mise (not apt).
 
-| Package           | Provides                        | Purpose                                                                       |
-|-------------------|---------------------------------|-------------------------------------------------------------------------------|
-| `ripgrep`         | `rg`                            | fast recursive grep; Claude Code's search backend                             |
-| `fd-find`         | `fd` (symlinked from `fdfind`)  | fast file finder                                                              |
-| `bat`             | `bat` (symlinked from `batcat`) | `cat` with syntax highlight + line numbers                                    |
-| `shellcheck`      |                                 | shell script linter                                                           |
-| `universal-ctags` | `ctags`                         | symbol/tag indexing for code nav                                              |
-| `patch`           |                                 | apply unified diffs                                                           |
-| `patchutils`      | `filterdiff`, `interdiff`, …    | manipulate patches                                                            |
-| `miller`          | `mlr`                           | CSV/TSV/JSON stream processor                                                 |
-| `csvkit`          | `csvlook`, `csvcut`, …          | CSV toolkit                                                                   |
-| `httpie`          | `http`, `https`                 | friendly HTTP client                                                          |
-| `netcat-openbsd`  | `nc`                            | TCP/UDP socket tool                                                           |
-| `socat`           |                                 | bidirectional socket relay                                                    |
-| `lsof`            |                                 | list open files / ports                                                       |
-| `file`            |                                 | detect file type by content                                                   |
-| `moreutils`       | `sponge`, `ts`, `chronic`, …    | extra Unix utilities                                                          |
-| `ncdu`            |                                 | interactive disk usage browser                                                |
-| `strace`          |                                 | trace syscalls / signals                                                      |
-| `rsync`           |                                 | fast incremental file sync                                                    |
-| `yq`              | `yq`                            | YAML/TOML/XML processor — installed via mise (`Dockerfile.base`), not via apt |
+**Developer + AI-agent tooling** (`Dockerfile.tooling`) — utilities coding agents shell out to plus general dev/network/data tools, moved off the baseline so the base layer stays minimal:
+
+| Package             | Provides                        | Purpose                                           |
+|---------------------|---------------------------------|---------------------------------------------------|
+| `ripgrep`           | `rg`                            | fast recursive grep; Claude Code's search backend |
+| `fd-find`           | `fd` (symlinked from `fdfind`)  | fast file finder                                  |
+| `bat`               | `bat` (symlinked from `batcat`) | `cat` with syntax highlight + line numbers        |
+| `shellcheck`        |                                 | shell script linter                               |
+| `yamllint`          |                                 | YAML linter                                       |
+| `universal-ctags`   | `ctags`                         | symbol/tag indexing for code nav                  |
+| `patch`             |                                 | apply unified diffs                               |
+| `patchutils`        | `filterdiff`, `interdiff`, …    | manipulate patches                                |
+| `miller`            | `mlr`                           | CSV/TSV/JSON stream processor                     |
+| `csvkit`            | `csvlook`, `csvcut`, …          | CSV toolkit                                       |
+| `httpie`            | `http`, `https`                 | friendly HTTP client                              |
+| `netcat-openbsd`    | `nc`                            | TCP/UDP socket tool                               |
+| `socat`             |                                 | bidirectional socket relay                        |
+| `lsof`              |                                 | list open files / ports                           |
+| `file`              |                                 | detect file type by content                       |
+| `moreutils`         | `sponge`, `ts`, `chronic`, …    | extra Unix utilities                              |
+| `ncdu`              |                                 | interactive disk usage browser                    |
+| `strace`            |                                 | trace syscalls / signals                          |
+| `rsync`             |                                 | fast incremental file sync                        |
+| `wget`              |                                 | HTTP download (gh keyring fetch)                  |
+| `dnsutils`          | `dig`, `nslookup`               | DNS debugging                                     |
+| `jq`                |                                 | JSON processor                                    |
+| `tree`              |                                 | directory tree view                               |
+| `man-db`            | `man`                           | manual pages                                      |
+| `postgresql-client` | `psql`                          | Postgres CLI                                      |
 
 ### Configuration and scripts
 
-| Path                       | Description                                                                                            |
-|----------------------------|--------------------------------------------------------------------------------------------------------|
-| `.devcontainer/`           | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally). |
-| `config/config.fish`       | Fish shell configuration (mise activation, Starship prompt, direnv hook, PATH).                        |
-| `scripts/agents/config.sh` | Installs Claude Code plugins and MCP servers (Context7, Tessl, GitHub).                                |
-| `scripts/agents/gemini.sh` | Gemini CLI extensions (CLI is installed in `Dockerfile.tooling`; this script is commented out there).  |
-| `Justfile`                 | Convenience commands for building the images and common container tasks.                               |
+| Path                       | Description                                                                                                        |
+|----------------------------|--------------------------------------------------------------------------------------------------------------------|
+| `.devcontainer/`           | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally).             |
+| `config/config.fish`       | Fish shell configuration (mise activation, Starship prompt, direnv hook, PATH).                                    |
+| `scripts/agents/config.sh` | Installs Claude Code plugins and MCP servers (Context7, Tessl, GitHub).                                            |
+| `scripts/agents/gemini.sh` | Gemini CLI extensions (CLI is installed in `Dockerfile.node`; this script is commented out in `Dockerfile.agent`). |
+| `Justfile`                 | Convenience commands for building the images and common container tasks.                                           |
 
 ### Docs and version pinning
 
@@ -91,20 +97,22 @@ Run `just` from the **repository root** (where `Dockerfile.base` and `Justfile` 
 just build
 ```
 
-This runs **`build-base`** → **`build-tooling`** → **`build-python`** → **`build-playwright`**, producing four images tagged with `VERSION` (default `local`) and `latest`:
+This runs **`build-base`** → **`build-node`** → **`build-tooling`** → **`build-python`** → **`build-playwright`** → **`build-agent`**, producing six images tagged with `VERSION` (default `local`) and `latest`:
 
 - `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:{VERSION,latest}`
+- `…/devcontainer-node:{VERSION,latest}`
 - `…/devcontainer-tooling:{VERSION,latest}`
 - `…/devcontainer-python:{VERSION,latest}`
 - `…/devcontainer-playwright:{VERSION,latest}`
+- `…/devcontainer-agent:{VERSION,latest}`
 
 #### Building a single layer
 
-Use **`just build-base`**, **`just build-tooling`**, **`just build-python`**, or **`just build-playwright`** alone when you only need one layer (for example, after pulling a published parent from GHCR).
+Use **`just build-base`**, **`just build-node`**, **`just build-tooling`**, **`just build-python`**, **`just build-playwright`**, or **`just build-agent`** alone when you only need one layer (for example, after pulling a published parent from GHCR).
 
 #### Selecting the base image
 
-`Dockerfile.tooling`, `Dockerfile.python`, and `Dockerfile.playwright` accept **`BASE_IMAGE`** (must match the layer you extend). The recipes wire each child to the prior layer's `:latest` tag locally so overrides to `IMAGE_BASE`/`IMAGE_TOOLING`/`IMAGE_PYTHON` still stack.
+`Dockerfile.node`, `Dockerfile.tooling`, `Dockerfile.python`, `Dockerfile.playwright`, and `Dockerfile.agent` accept **`BASE_IMAGE`** (must match the layer you extend). The recipes wire each child to the prior layer's `:latest` tag locally so overrides to `IMAGE_BASE`/`IMAGE_NODE`/`IMAGE_TOOLING`/`IMAGE_PYTHON`/`IMAGE_PLAYWRIGHT` still stack.
 
 #### Tool and language versions
 
@@ -119,7 +127,7 @@ breakdown, backends, and adding tools.
 
 #### GitHub Actions builds
 
-In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), four independent jobs (`build-base`, `build-tooling`, `build-python`, `build-playwright`) each build and push their own image to GHCR with metadata-driven tags (branch, PR, semver, SHA, `latest` on the default branch). Each job is a separate runner — `devcontainer-base` is pushed and pullable the moment its job finishes, regardless of whether the downstream `tooling`/`python`/`playwright` jobs are still running or have failed. Downstream jobs pin **`BASE_IMAGE`** to the upstream **digest** so child images match exactly. On **pull requests** images are not pushed, so the downstream jobs fall back to the parent's `:latest` tag on GHCR for Dockerfile validation.
+In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), six independent jobs (`build-base`, `build-node`, `build-tooling`, `build-python`, `build-playwright`, `build-agent`) each build and push their own image to GHCR with metadata-driven tags (branch, PR, semver, SHA, `latest` on the default branch). Each job is a separate runner — `devcontainer-base` is pushed and pullable the moment its job finishes, regardless of whether the downstream `node`/`tooling`/`python`/`playwright`/`agent` jobs are still running or have failed. Downstream jobs pin **`BASE_IMAGE`** to the upstream **digest** so child images match exactly. On **pull requests** images are not pushed, so the downstream jobs fall back to the parent's `:latest` tag on GHCR for Dockerfile validation.
 
 Tool and language versions are not build-args — they are pinned in `mise.toml` and installed per layer with `mise install` (see [docs/version-management.md](docs/version-management.md)).
 
@@ -135,10 +143,12 @@ The following variables can be overridden at invocation time (see the `Justfile`
 |----------------------|-----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `TZ`                 | `Europe/Amsterdam` (or `$TZ` from the environment)                    | Timezone baked into the image                                                                                                                                        |
 | `IMAGE_BASE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`       | Registry/repository path for the base image (`Dockerfile.base`)                                                                                                      |
+| `IMAGE_NODE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node`       | Registry/repository path for the Node child image (`Dockerfile.node`)                                                                                                |
 | `IMAGE_TOOLING`      | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling`    | Registry/repository path for the tooling child image (`Dockerfile.tooling`)                                                                                          |
 | `IMAGE_PYTHON`       | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python`     | Registry/repository path for the Python child image (`Dockerfile.python`)                                                                                            |
 | `IMAGE_PLAYWRIGHT`   | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright` | Registry/repository path for the Playwright child image (`Dockerfile.playwright`)                                                                                    |
-| `VERSION`            | `local`                                                               | Primary image tag for **all four** images (also written into `IMAGE_VERSION` for the base image stamp)                                                               |
+| `IMAGE_AGENT`        | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent`      | Registry/repository path for the agent top image (`Dockerfile.agent`)                                                                                                |
+| `VERSION`            | `local`                                                               | Primary image tag for **all six** images (also written into `IMAGE_VERSION` for the base image stamp)                                                                |
 | `SUDO_PASSWORD_FILE` | `config/.sudo-password`                                               | Optional one-line disposable password file; passed as secret `container_user_password` so it does **not** land in image history                                      |
 | `SSH_CONFIG_FILE`    | `config/.ssh/config`                                                  | If this path exists and is non-empty, it is passed as secret `ssh_config`; otherwise the build skips SSH client config (mirrors unset/empty `SSH_CONFIG` in Actions) |
 

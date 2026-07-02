@@ -5,15 +5,19 @@
 # Running devcontainer container name. Used by both Container lifecycle and Shell access.
 CONTAINER := "coding-agent-sandbox-devcontainer"
 
-# Four-layer image chain: base -> tooling -> python -> playwright. Each is published independently in CI.
-# Used by both Registry (pull) and Image builds.
+# Six-layer image chain: base -> node -> tooling -> python -> playwright -> agent.
+# Each is published independently in CI. Used by both Registry (pull) and Image builds.
 IMAGE_BASE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base"
-# Adds developer + AI tooling (git-delta, just-lsp, sandbox-runtime, Claude/Codex/Gemini/OpenCode/Tessl) on top of base.
+# Adds Node + all npm-global packages (JS dev tools + npm-based AI CLIs) on top of base.
+IMAGE_NODE := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node"
+# Adds general (non-node) developer tooling (gh, glab, tofu, cloud CLIs, git-delta, just, just-lsp, chezmoi) on top of node.
 IMAGE_TOOLING := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling"
 # Adds Python + uv on top of tooling.
 IMAGE_PYTHON := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python"
 # Adds Playwright (Chromium + system deps) on top of python.
 IMAGE_PLAYWRIGHT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-playwright"
+# Adds script-based AI agent installers + agent config (Claude Code, Tessl, herdr, apm) on top of playwright. This is the image the devcontainer runs.
+IMAGE_AGENT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Default
@@ -50,9 +54,11 @@ claude PROJECT_NAME:
 # Pull all images from GitHub Container Registry with latest tag.
 pull:
     docker pull {{ IMAGE_BASE }}:latest
+    docker pull {{ IMAGE_NODE }}:latest
     docker pull {{ IMAGE_TOOLING }}:latest
     docker pull {{ IMAGE_PYTHON }}:latest
     docker pull {{ IMAGE_PLAYWRIGHT }}:latest
+    docker pull {{ IMAGE_AGENT }}:latest
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Versions
@@ -73,8 +79,8 @@ SSH_CONFIG_FILE := "config/.ssh/config"
 # `container_user_password`; not stored in image history like a `--build-arg`). Omit for CI.
 SUDO_PASSWORD_FILE := "config/.sudo-password"
 
-# Base devcontainer image (Node + OS apt packages + shell/identity, no developer tooling).
-# Tags :latest for the tooling stage FROM.
+# Base devcontainer image (OS apt packages + shell/identity + mise, no Node, no developer tooling).
+# Tags :latest for the node stage FROM.
 build-base:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -96,10 +102,19 @@ build-base:
         --file Dockerfile.base \
         .
 
-# Tooling layer on top of {{ IMAGE_BASE }}:latest (general dev tooling + AI tooling).
-build-tooling:
+# Node layer on top of {{ IMAGE_BASE }}:latest (node/pnpm/yarn + all npm-global packages).
+build-node:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_BASE }}:latest" \
+        --tag "{{ IMAGE_NODE }}:{{ VERSION }}" \
+        --tag "{{ IMAGE_NODE }}:latest" \
+        --file Dockerfile.node \
+        .
+
+# Tooling layer on top of {{ IMAGE_NODE }}:latest (general non-node dev tooling).
+build-tooling:
+    docker build \
+        --build-arg BASE_IMAGE="{{ IMAGE_NODE }}:latest" \
         --tag "{{ IMAGE_TOOLING }}:{{ VERSION }}" \
         --tag "{{ IMAGE_TOOLING }}:latest" \
         --file Dockerfile.tooling \
@@ -123,8 +138,17 @@ build-playwright:
         --file Dockerfile.playwright \
         .
 
-# Build all four images (base -> tooling -> python -> playwright).
-build: build-base build-tooling build-python build-playwright
+# Agent layer on top of {{ IMAGE_PLAYWRIGHT }}:latest (top of chain; the image the devcontainer runs).
+build-agent:
+    docker build \
+        --build-arg BASE_IMAGE="{{ IMAGE_PLAYWRIGHT }}:latest" \
+        --tag "{{ IMAGE_AGENT }}:{{ VERSION }}" \
+        --tag "{{ IMAGE_AGENT }}:latest" \
+        --file Dockerfile.agent \
+        .
+
+# Build all six images (base -> node -> tooling -> python -> playwright -> agent).
+build: build-base build-node build-tooling build-python build-playwright build-agent
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Container lifecycle

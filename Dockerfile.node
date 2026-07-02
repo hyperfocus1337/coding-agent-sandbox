@@ -1,0 +1,75 @@
+# syntax=docker/dockerfile:1
+# Node.js runtime + all npm-global packages on top of the base devcontainer image.
+# Node/pnpm/yarn move here out of the base image; every `npm install -g` (JS dev
+# tooling and the npm-based AI CLIs) lives here so all node package installs are in
+# one layer. Script/curl-based AI installers stay in Dockerfile.agent (top layer).
+ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:latest
+FROM ${BASE_IMAGE}
+
+# Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
+ARG USERNAME=node
+
+# Numeric uid/gid for `--mount=type=cache,uid=,gid=` below — must match the non-root user
+# so npm cache writes are owned correctly.
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+# Automatically set by BuildKit for multi-platform builds; used to scope caches per arch.
+ARG TARGETARCH
+
+USER $USERNAME
+
+# Node + package managers via mise (installed as $USERNAME into the user-owned
+# MISE_DATA_DIR). Versions come from the mise.toml baked into the base image. Node
+# brings its own npm, so the `npm install -g` steps below and the NPM_CONFIG_PREFIX
+# set in the base image resolve through the mise shim.
+RUN mise install node pnpm yarn
+
+# ----- npm-global JS dev tooling -----
+
+# Prettier code formatter
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g prettier
+
+# Markdownlint CLI v2
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g markdownlint-cli2
+
+# ESLint (JavaScript/TypeScript linter)
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g eslint
+
+# Neon CLI (neonctl): manage Neon serverless Postgres projects/branches.
+# https://neon.com/docs/reference/neon-cli
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g neonctl
+
+# ----- npm-based AI CLIs -----
+# The npm-installed agent CLIs live here with the rest of the node packages. The
+# curl/script-based agent installers (Claude Code, Tessl, herdr, apm) are in
+# Dockerfile.agent instead.
+
+# Claude Code sandbox runtime (npm). System deps (bubblewrap/socat/seccomp) are
+# installed as root in Dockerfile.agent, alongside the Claude Code CLI that uses them.
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @anthropic-ai/sandbox-runtime
+
+# Codex CLI
+# https://developers.openai.com/codex/cli
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @openai/codex
+
+# Gemini CLI
+# https://geminicli.com/docs/get-started/installation/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @google/gemini-cli
+
+# OpenCode
+# https://opencode.ai/docs/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g opencode-ai
+
+# GitLab Duo CLI
+# https://docs.gitlab.com/user/gitlab_duo_cli/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @gitlab/duo-cli

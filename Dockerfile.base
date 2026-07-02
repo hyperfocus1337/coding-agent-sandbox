@@ -151,12 +151,11 @@ ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
 ENV PATH="/usr/local/share/npm-global/bin:$PATH"
 
-# Languages and package managers via mise (installed as $USERNAME so they land in
-# the user-owned MISE_DATA_DIR). Versions come from mise.toml COPY'd above. Node
-# brings its own npm, so the tooling layer's `npm install -g` and NPM_CONFIG_PREFIX
-# above keep working through the mise shim. pnpm/yarn replace the old Corepack
-# dance; yq and starship replace a binary download and a vendor script.
-RUN mise install node pnpm yarn yq starship
+# Shell/prompt + data tooling via mise (installed as $USERNAME so they land in the
+# user-owned MISE_DATA_DIR). Versions come from mise.toml COPY'd above. Node/pnpm/yarn
+# now live in Dockerfile.node (the next layer); the NPM_CONFIG_PREFIX + PATH env above is
+# declared here so it is already in place when that layer installs node.
+RUN mise install yq starship
 
 # Copy user configurations
 COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish/config.fish

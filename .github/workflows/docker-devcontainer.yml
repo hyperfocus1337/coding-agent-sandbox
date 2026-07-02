@@ -6,9 +6,11 @@ on:
     tags: ["v*"]
     paths:
       - Dockerfile.base
+      - Dockerfile.node
       - Dockerfile.tooling
       - Dockerfile.python
       - Dockerfile.playwright
+      - Dockerfile.agent
       - mise.toml
       - config/*
       - scripts/*/*
@@ -16,9 +18,11 @@ on:
   pull_request:
     paths:
       - Dockerfile.base
+      - Dockerfile.node
       - Dockerfile.tooling
       - Dockerfile.python
       - Dockerfile.playwright
+      - Dockerfile.agent
       - mise.toml
       - config/*
       - scripts/*/*
@@ -94,7 +98,7 @@ jobs:
           cache-from: type=gha,scope=base
           cache-to: type=gha,mode=max,scope=base
 
-  build-tooling:
+  build-node:
     needs: build-base
     runs-on: ubuntu-latest
     permissions:
@@ -119,12 +123,71 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # config/.gitconfig is gitignored, so write it from repo variable GITCONFIG before Dockerfile.tooling
-      # COPYs it. Assign via env: to preserve multiline values. Empty/unset → builds with no Git identity.
-      - name: Write personal gitconfig
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/devcontainer-node
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # On non-PR builds the base image was pushed; pin BASE_IMAGE to its digest. On PR fall back to :latest.
+      - name: Resolve node base image
+        id: nodebase
         env:
-          GITCONFIG: ${{ vars.GITCONFIG }}
-        run: printf '%s' "$GITCONFIG" > config/.gitconfig
+          DIGEST: ${{ needs.build-base.outputs.digest }}
+        run: |
+          repo="ghcr.io/${{ github.repository }}/devcontainer-base"
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
+            echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=${repo}:latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push node
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.node
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ steps.nodebase.outputs.base }}
+          cache-from: type=gha,scope=node
+          cache-to: type=gha,mode=max,scope=node
+
+  build-tooling:
+    needs: build-node
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -139,13 +202,13 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # On non-PR builds the base image was pushed; pin BASE_IMAGE to its digest. On PR fall back to :latest.
+      # On non-PR builds the node image was pushed; pin BASE_IMAGE to its digest. On PR fall back to :latest.
       - name: Resolve tooling base image
         id: toolbase
         env:
-          DIGEST: ${{ needs.build-base.outputs.digest }}
+          DIGEST: ${{ needs.build-node.outputs.digest }}
         run: |
-          repo="ghcr.io/${{ github.repository }}/devcontainer-base"
+          repo="ghcr.io/${{ github.repository }}/devcontainer-node"
           if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
             echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
           else
@@ -241,6 +304,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -299,6 +364,7 @@ jobs:
           fi
 
       - name: Build and push playwright
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -311,3 +377,85 @@ jobs:
             BASE_IMAGE=${{ steps.pwbase.outputs.base }}
           cache-from: type=gha,scope=playwright
           cache-to: type=gha,mode=max,scope=playwright
+
+  build-agent:
+    needs: build-playwright
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Agent builds on top of the heavy playwright image for both arches (arm64 under QEMU),
+      # so reclaim disk the same way the playwright job does to avoid ENOSPC.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # config/.gitconfig is gitignored, so write it from repo variable GITCONFIG before Dockerfile.agent
+      # COPYs it. Assign via env: to preserve multiline values. Empty/unset → builds with no Git identity.
+      - name: Write personal gitconfig
+        env:
+          GITCONFIG: ${{ vars.GITCONFIG }}
+        run: printf '%s' "$GITCONFIG" > config/.gitconfig
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/devcontainer-agent
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # On non-PR builds pin BASE_IMAGE to the playwright digest from the upstream job; on PR fall back to :latest.
+      - name: Resolve agent base image
+        id: agentbase
+        env:
+          DIGEST: ${{ needs.build-playwright.outputs.digest }}
+        run: |
+          repo="ghcr.io/${{ github.repository }}/devcontainer-playwright"
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$DIGEST" ]; then
+            echo "base=${repo}@${DIGEST}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=${repo}:latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push agent
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.agent
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ steps.agentbase.outputs.base }}
+          cache-from: type=gha,scope=agent
+          cache-to: type=gha,mode=max,scope=agent
