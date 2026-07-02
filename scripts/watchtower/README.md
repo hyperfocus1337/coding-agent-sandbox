@@ -43,6 +43,38 @@ Idempotent: skips if `config.json` already has `ghcr.io` auth (`--force` overrid
 1. **`$GHCR_TOKEN`** (preferred) — your `read:packages` PAT.
 2. **`gh auth token`** (fallback, when `$GHCR_TOKEN` is unset) — warns, because it embeds your full-scope `gh` token (see below).
 
+## Verify the token is read-only
+
+Three checks confirm the credential Watchtower uses is a read-only pull token and nothing more.
+
+**1. Check the PAT's scopes (definitive).** Ask GitHub which scopes the token carries; a read-only pull token lists exactly `read:packages` and nothing else:
+
+```bash
+curl -sI -H "Authorization: token $GHCR_TOKEN" https://api.github.com | grep -i x-oauth-scopes
+# x-oauth-scopes: read:packages
+```
+
+Extra scopes (`repo`, `write:packages`, `delete:packages`) or a missing header mean the token is broader than it should be — regenerate it with only `read:packages`.
+
+**2. Check that this is the token baked into the config Watchtower reads.** The container loads `config/.watchtower-docker/config.json`; decode the stored `ghcr.io` credential and confirm the token half matches your PAT (not a `gho_…`/`ghp_…` full-scope `gh` token from the fallback):
+
+```bash
+jq -r '.auths["ghcr.io"].auth' config/.watchtower-docker/config.json | base64 -d; echo
+# <username>:ghp_xxxxxxxx   (-D instead of -d on macOS)
+```
+
+If the token differs from `$GHCR_TOKEN`, you synced via the `gh auth token` fallback — set `$GHCR_TOKEN` and re-run `just sync-watchtower-ghcr-auth --force`.
+
+**3. Check the container can't modify that file.** `docker-compose.yml` mounts the config `:ro`, so even the running container cannot alter or widen the credential:
+
+```bash
+docker inspect coding-agent-sandbox-watchtower \
+  --format '{{range .Mounts}}{{.Destination}} {{if .RW}}rw{{else}}ro{{end}}{{"\n"}}{{end}}'
+# /config ro
+```
+
+Optional behavioral proof: a `read:packages` token pulls but 403s on any push. After `docker login ghcr.io` with the token, a `docker push` to the registry returns `denied`.
+
 ## Why not a fine-grained token?
 
 GHCR doesn't accept them. GitHub's docs are explicit: [Packages "only supports authentication using a personal access token (classic)"](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry), and [fine-grained tokens list package access as unsupported](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). A fine-grained token just 403s on `docker pull`. (A classic `read:packages` PAT can't be scoped to one repo either — it reads every package the account sees.)
