@@ -37,10 +37,11 @@ RUN curl -sSL https://aka.ms/apm-unix | APM_INSTALL_DIR="$HOME/.local/bin" sh
 COPY --chown=$USERNAME:$USERNAME config/.gitconfig /home/$USERNAME/.gitconfig
 
 # Agent helper scripts (config.sh applies dotfiles via chezmoi/just, both from lower layers).
-COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
+# Commented for now, the home folder is mounted as a volume thus any changes get overwritten on container start.
+# COPY --chown=$USERNAME:$USERNAME scripts/agents/ /home/$USERNAME/scripts/agents/
 
 # Install agent dependencies
-RUN bash /home/$USERNAME/scripts/agents/config.sh
+# RUN bash /home/$USERNAME/scripts/agents/config.sh
 
 # Install Gemini extensions
 # RUN bash /home/$USERNAME/scripts/agents/gemini.sh
