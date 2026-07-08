@@ -163,6 +163,10 @@ init-volumes:
         fi
     done
 
+# Chown all named-volume mount targets back to node:node (fresh volumes are root-owned).
+fix-volume-permissions:
+    bash scripts/container/fix-volume-permissions.sh
+
 # Start using docker compose by default.
 up: up-compose
 
