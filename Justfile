@@ -156,7 +156,7 @@ COMPOSE_FILES := "-f .devcontainer/docker-compose.yml -f .devcontainer/docker-co
 init-volumes:
     #!/usr/bin/env bash
     set -euo pipefail
-    for v in claude-config gitlab-duo-config gitlab-cli-config aws-cli-config azure-cli-config oracle-cli-config opencode-config opencode-auth cursor-state vscode-state fish-history ssh-config; do
+    for v in claude-config gitlab-duo-config gitlab-cli-config aws-cli-config azure-cli-config oracle-cli-config opencode-config opencode-auth cursor-state vscode-state fish-history ssh-config gemini-config codex-config ccstatusline-config; do
         name="coding-agent-sandbox-$v"
         if ! docker volume inspect "$name" >/dev/null 2>&1; then
             docker volume create "$name"

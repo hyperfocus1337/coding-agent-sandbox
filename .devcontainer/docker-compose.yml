@@ -30,6 +30,9 @@ services:
       - coding-agent-sandbox-vscode-state:/home/node/.vscode-server
       - coding-agent-sandbox-fish-history:/home/node/.local/share/fish
       - coding-agent-sandbox-ssh-config:/home/node/.ssh
+      - coding-agent-sandbox-gemini-config:/home/node/.gemini
+      - coding-agent-sandbox-codex-config:/home/node/.codex
+      - coding-agent-sandbox-ccstatusline-config:/home/node/.config/ccstatusline
       # Additional workspace bind mounts (local repo paths) live in
       # docker-compose.override.yml — gitignored and merged at runtime.
 
@@ -75,6 +78,12 @@ volumes:
   coding-agent-sandbox-fish-history:
     external: true
   coding-agent-sandbox-ssh-config:
+    external: true
+  coding-agent-sandbox-gemini-config:
+    external: true
+  coding-agent-sandbox-codex-config:
+    external: true
+  coding-agent-sandbox-ccstatusline-config:
     external: true
 
 networks:
