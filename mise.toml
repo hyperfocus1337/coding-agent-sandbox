@@ -5,7 +5,7 @@
 # from here:
 #   Dockerfile.base       -> yq, starship
 #   Dockerfile.node       -> node, pnpm, yarn
-#   Dockerfile.tooling    -> glab, just, terraform, git-delta (aqua:dandavison/delta), just-lsp
+#   Dockerfile.tooling    -> glab, just, terraform, kubectl, git-delta (aqua:dandavison/delta), just-lsp
 #   Dockerfile.python     -> python, uv (also installs Chromium via `uv run`, @playwright/cli via npm; not mise)
 #   Dockerfile.agent      -> (none; script/curl-based AI installers)
 #
@@ -28,5 +28,6 @@ starship = "latest"
 glab = "1.100.0"
 just = "1.51.0"
 terraform = "1.15.5"
+kubectl = "1.36.0"
 "aqua:dandavison/delta" = "0.19.2"
 "ubi:terror/just-lsp" = "0.4.5"
