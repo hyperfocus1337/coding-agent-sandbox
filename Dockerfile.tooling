@@ -113,7 +113,7 @@ USER $USERNAME
 # base image. Short names resolve through mise's registry; git-delta uses its explicit
 # aqua backend and just-lsp (not in the registry) uses the ubi GitHub-release backend,
 # which downloads + extracts the release binary.
-RUN mise install glab just terraform kubectl aqua:dandavison/delta ubi:terror/just-lsp
+RUN mise install glab just terraform kubectl k3s aqua:dandavison/delta ubi:terror/just-lsp
 
 # GitHub Stacked PRs (gh stack) extension: break large changes into small, stacked PRs.
 # Installs into the user-owned gh extension dir (~/.local/share/gh). Requires the gh CLI above.
