@@ -12,7 +12,7 @@ ENV MISE_CONFIG_DIR="/usr/local/share/mise"
 ENV PATH="/usr/local/share/mise/shims:$PATH"
 ```
 
-Every version lives in one file: [`mise.toml`](../mise.toml) at the repo root. `Dockerfile.base` COPYs it in as mise's global config (`/usr/local/share/mise/config.toml`), then each layer materializes only its subset with `mise install <tools>`, reading the pins from that config:
+Every version lives in one file: [`mise.toml`](../../mise.toml) at the repo root. `Dockerfile.base` COPYs it in as mise's global config (`/usr/local/share/mise/config.toml`), then each layer materializes only its subset with `mise install <tools>`, reading the pins from that config:
 
 | Layer                | `mise install …`                                     |
 |----------------------|------------------------------------------------------|
@@ -42,4 +42,4 @@ Most tools resolve by short name through mise's built-in [registry](https://mise
 
 ## What is deliberately not on mise
 
-Base OS utilities stay on apt, the agent CLIs stay on npm, and ruff/oci-cli stay on uv. See [brew-research.md](brew-research.md) for the per-ecosystem reasoning; mise owns the languages and the version-pinned-binary niche, which is where it fits best.
+Base OS utilities stay on apt, the agent CLIs stay on npm, and ruff/oci-cli stay on uv. See [brew-research.md](../lessons/brew-research.md) for the per-ecosystem reasoning; mise owns the languages and the version-pinned-binary niche, which is where it fits best.

@@ -1,6 +1,6 @@
 # Neovim config
 
-The Neovim config in [config/nvim/](../config/nvim/) is a minimal setup for editing inside a container that has no X display or Wayland session. Its one job is to make yank land on the host clipboard.
+The Neovim config in [config/nvim/](../../config/nvim/) is a minimal setup for editing inside a container that has no X display or Wayland session. Its one job is to make yank land on the host clipboard.
 
 ## The problem
 
@@ -10,7 +10,7 @@ Inside a container there is no local clipboard provider (no `xclip`, `wl-copy`, 
 
 The config yanks to the system clipboard over OSC52 escape sequences. Neovim writes the clipboard data as a terminal escape sequence, the terminal emulator sees it and relays the content to the host clipboard. This works across the container boundary because it rides the same terminal stream you are already connected through, so it needs no shared socket or display.
 
-Two settings make this happen in [init.lua](../config/nvim/init.lua):
+Two settings make this happen in [init.lua](../../config/nvim/init.lua):
 
 - `vim.opt.clipboard = "unnamedplus"` routes the unnamed register through the `+`/`*` clipboard registers, so a plain `y`/`p` uses the system clipboard instead of a Neovim-only register.
 - `vim.g.clipboard` registers an OSC52 provider (from the builtin `vim.ui.clipboard.osc52` module) for both copy and paste on the `+` and `*` registers.

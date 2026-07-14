@@ -68,7 +68,7 @@ pull:
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Tool and language versions are pinned in mise.toml (single source of truth).
-# To bump: edit the version in mise.toml, then rebuild. See docs/version-management.md.
+# To bump: edit the version in mise.toml, then rebuild. See docs/guides/version-management.md.
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Image builds

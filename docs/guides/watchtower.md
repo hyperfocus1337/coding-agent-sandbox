@@ -1,6 +1,6 @@
 # Watchtower (auto-updates from GHCR)
 
-The compose stack includes Watchtower for labeled containers. Private GHCR images need a **Watchtower-only** Docker config (macOS `credsStore: osxkeychain` does not work inside the Watchtower container). See [.devcontainer/README.md](../.devcontainer/README.md#ghcr-authentication-private-packages) for details.
+The compose stack includes Watchtower for labeled containers. Private GHCR images need a **Watchtower-only** Docker config (macOS `credsStore: osxkeychain` does not work inside the Watchtower container). See [.devcontainer/README.md](../../.devcontainer/README.md#ghcr-authentication-private-packages) for details.
 
 ```bash
 just sync-watchtower-ghcr-auth   # once per machine / after token rotation

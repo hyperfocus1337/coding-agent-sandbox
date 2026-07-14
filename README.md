@@ -72,21 +72,21 @@ The devcontainer is built from a layered stack of images (`base` → `node` → 
 
 How-to and reference guides for building, configuring, and running the sandbox.
 
-| Doc                                                         | Covers                                                                                              |
-|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| [building-images.md](docs/building-images.md)               | Building the image layers: single-layer builds, `BASE_IMAGE`, CI, SSH config, overridable variables |
-| [version-management.md](docs/version-management.md)         | How languages and pinned tools are installed and versioned via mise                                 |
-| [sudo-password.md](docs/sudo-password.md)                   | Enabling `sudo` for ad-hoc package installs via a disposable password                               |
-| [watchtower.md](docs/watchtower.md)                         | Auto-updating containers from GHCR with Watchtower                                                  |
-| [sharing-claude-history.md](docs/sharing-claude-history.md) | Migrating Claude Code conversation history across machines or Docker volumes                        |
+| Doc                                                                | Covers                                                                                              |
+|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| [building-images.md](docs/guides/building-images.md)               | Building the image layers: single-layer builds, `BASE_IMAGE`, CI, SSH config, overridable variables |
+| [version-management.md](docs/guides/version-management.md)         | How languages and pinned tools are installed and versioned via mise                                 |
+| [sudo-password.md](docs/guides/sudo-password.md)                   | Enabling `sudo` for ad-hoc package installs via a disposable password                               |
+| [watchtower.md](docs/guides/watchtower.md)                         | Auto-updating containers from GHCR with Watchtower                                                  |
+| [sharing-claude-history.md](docs/guides/sharing-claude-history.md) | Migrating Claude Code conversation history across machines or Docker volumes                        |
+| [nvim.md](docs/guides/nvim.md)                                     | Minimal Neovim setup for editing in-container, with yank landing on the host clipboard              |
 
 ## Lessons learned (while building this project)
 
 Investigation notes and writeups from building the sandbox: approaches that were tried, why they did or did not work, and what the current setup settled on.
 
-| Doc                                                                       | Covers                                                                                           |
-|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| [brew-research.md](docs/brew-research.md)                                 | Whether Homebrew on Linux could replace the apt/mise package installs, and why it was rejected   |
-| [fish-history-docker-mounts.md](docs/fish-history-docker-mounts.md)       | Why fish history breaks across Docker mount boundaries (cross-device `rename()`) and the fix     |
-| [host-vs-container-packages.md](docs/host-vs-container-packages.md)       | A bidirectional inventory diff of the tools in the devcontainer versus the maintainer's Mac      |
-| [sharing-claude-config-lessons.md](docs/sharing-claude-config-lessons.md) | What went wrong bind-mounting the host `~/.claude` into the devcontainer, and what to do instead |
+| Doc                                                                               | Covers                                                                                           |
+|-----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| [brew-research.md](docs/lessons/brew-research.md)                                 | Whether Homebrew on Linux could replace the apt/mise package installs, and why it was rejected   |
+| [fish-history-docker-mounts.md](docs/lessons/fish-history-docker-mounts.md)       | Why fish history breaks across Docker mount boundaries (cross-device `rename()`) and the fix     |
+| [sharing-claude-config-lessons.md](docs/lessons/sharing-claude-config-lessons.md) | What went wrong bind-mounting the host `~/.claude` into the devcontainer, and what to do instead |

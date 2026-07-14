@@ -1,7 +1,7 @@
 # Investigation: could Homebrew on Linux replace package installs?
 
 > **Update:** the languages and the standalone release binaries have since moved
-> to [mise](https://github.com/jdx/mise) (see [version-management.md](version-management.md)).
+> to [mise](https://github.com/jdx/mise) (see [version-management.md](../guides/version-management.md)).
 > That does not contradict this note's verdict against Homebrew: mise is a
 > purpose-built polyglot version manager (not a second OS package manager), it
 > pins exact versions so builds stay reproducible, and it leaves base OS
@@ -9,9 +9,9 @@
 > argued below. So the "keep on version scripts" recommendations in the tables
 > now read as "keep pinned via mise".
 
-This note records whether the packages installed across the Dockerfiles ([Dockerfile.base](../Dockerfile.base), [Dockerfile.node](../Dockerfile.node), [Dockerfile.tooling](../Dockerfile.tooling), [Dockerfile.python](../Dockerfile.python), [Dockerfile.agent](../Dockerfile.agent)) could be installed through Homebrew for Linux instead of their current managers (apt, single-binary downloads, vendor install scripts, npm, and uv).
+This note records whether the packages installed across the Dockerfiles ([Dockerfile.base](../../Dockerfile.base), [Dockerfile.node](../../Dockerfile.node), [Dockerfile.tooling](../../Dockerfile.tooling), [Dockerfile.python](../../Dockerfile.python), [Dockerfile.agent](../../Dockerfile.agent)) could be installed through Homebrew for Linux instead of their current managers (apt, single-binary downloads, vendor install scripts, npm, and uv).
 
-It started as a narrower question about the version-pinning scripts under [scripts/versions/](../scripts/versions/) (see [version-management.md](version-management.md)) and was widened to every package.
+It started as a narrower question about the version-pinning scripts under [scripts/versions/](../../scripts/versions/) (see [version-management.md](../guides/version-management.md)) and was widened to every package.
 
 ## Verdict
 
@@ -19,7 +19,7 @@ Availability is not the problem. Almost every CLI tool here has a Homebrew formu
 
 - Adopting Linuxbrew adds roughly 400-500 MB before installing a single tool (the brew repo plus the homebrew-core formula clone is about 500 MB; portable-ruby adds about 25 MB). The current static-binary downloads add tens of MB total.
 - Homebrew refuses to run as root, while the image installs many packages system-wide as root.
-- Each ecosystem already has a better-fit manager: apt for base OS utilities, npm for the agent CLIs, uv for the Python tools, and the pinned [versions.lock](../versions.lock) scripts for the standalone release binaries (which give reproducible builds brew does not).
+- Each ecosystem already has a better-fit manager: apt for base OS utilities, npm for the agent CLIs, uv for the Python tools, and the pinned [versions.lock](../../versions.lock) scripts for the standalone release binaries (which give reproducible builds brew does not).
 
 So no migration is recommended. This is documented so the question is not re-investigated. The findings below are still useful as a reference for what is available, should a single tool ever need it.
 
@@ -97,7 +97,7 @@ Every tool below that exists on brew ships both `x86_64_linux` and `arm64_linux`
 - **apt** for base OS utilities and sandbox deps: already present in the `node:trixie` base, no extra runtime, smaller than brew, and these are foundational tools where a newer version buys nothing.
 - **npm** for the agent CLIs (prettier, eslint, codex, gemini-cli, opencode, duo-cli, sandbox-runtime, claude): brew formulae for npm tools are often absent, lag releases, or are just noarch wrappers around npm. npm tracks the current release.
 - **uv** for the Python tools (ruff, oci-cli, playwright, cloakbrowser): isolated per-tool venvs, pinnable, decoupled from whatever Python brew would pull in as a dependency.
-- **version scripts** for the standalone release binaries (glab, git-delta, just, just-lsp, terraform): reproducible pinned builds via [versions.lock](../versions.lock), which `brew install` cannot match, and just-lsp has no formula at all.
+- **version scripts** for the standalone release binaries (glab, git-delta, just, just-lsp, terraform): reproducible pinned builds via [versions.lock](../../versions.lock), which `brew install` cannot match, and just-lsp has no formula at all.
 
 ## Sources
 
