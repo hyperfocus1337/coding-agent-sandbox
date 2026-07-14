@@ -41,7 +41,8 @@ RUN uv tool install ast-grep-cli && \
     uv tool install pyrefly && \
     uv tool install python-gitlab && \
     uv tool install semgrep && \
-    uv tool install "markitdown[all]"
+    uv tool install "markitdown[all]" && \
+    uv tool install markitdown-mcp
 
 # ===== Playwright (merged from the former Dockerfile.playwright layer) =====
 
