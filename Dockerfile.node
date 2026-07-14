@@ -44,6 +44,18 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g eslint
 
+# Mermaid CLI (mmdc): render .mmd diagrams to SVG/PNG/PDF via a headless browser (puppeteer).
+# PUPPETEER_SKIP_DOWNLOAD stops puppeteer's postinstall from fetching its own Chromium (which
+# grabbed an arch-wrong amd64 build on arm64 and failed to launch); instead we point it at the
+# distro chromium apt-installed in Dockerfile.tooling, which ships a SUID sandbox so mmdc runs
+# headless as the non-root user with no --no-sandbox flag. The env is also picked up by ad-hoc
+# `npx @mermaid-js/mermaid-cli` runs. /usr/bin/chromium is provided by the tooling layer above.
+# https://github.com/mermaid-js/mermaid-cli
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @mermaid-js/mermaid-cli
+
 # Neon CLI (neonctl): manage Neon serverless Postgres projects/branches.
 # https://neon.com/docs/reference/neon-cli
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
