@@ -170,6 +170,7 @@ fix-volume-permissions:
 # Append a project bind mount to the compose override, then restart to mount it.
 # PROJECT is the path under ~/Repositories (e.g. `agents/my-project`); the last
 # segment becomes the /workspaces target. CONSISTENCY defaults to delegated.
+# See docs/guides/mounting-projects.md.
 add-project PROJECT CONSISTENCY="delegated":
     #!/usr/bin/env bash
     set -euo pipefail
