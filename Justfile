@@ -167,6 +167,25 @@ init-volumes:
 fix-volume-permissions:
     bash scripts/container/fix-volume-permissions.sh
 
+# Append a project bind mount to the compose override, then restart to mount it.
+# PROJECT is the path under ~/Repositories (e.g. `agents/my-project`); the last
+# segment becomes the /workspaces target. CONSISTENCY defaults to delegated.
+add-project PROJECT CONSISTENCY="delegated":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    override=".devcontainer/docker-compose.override.yml"
+    # Accept a bare `agents/foo`, `~/Repositories/agents/foo`, or an absolute
+    # `/Users/x/Repositories/agents/foo`; keep only the part after Repositories/.
+    project="{{ PROJECT }}"
+    project="${project#*Repositories/}"
+    line="      - \${HOME}/Repositories/${project}:/workspaces/$(basename "$project"):{{ CONSISTENCY }}"
+    if grep -qF "$line" "$override"; then
+        echo "already mounted: $project"
+        exit 0
+    fi
+    printf '%s\n' "$line" >> "$override"
+    just up
+
 # Start using docker compose by default.
 up: up-compose
 
