@@ -65,19 +65,6 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Dockerfile.base uses BuildKit optional secret `ssh_config` (same as local `--secret`).
-      # Write repo secret SSH_CONFIG → file; assign via env: so multiline values are not
-      # mangled by ${{ }} shell expansion. Empty/unset → image still builds (no ~/.ssh/config).
-      - name: Write BuildKit secret files
-        env:
-          SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
-          # Optional disposable `node` password for `sudo` in the image.
-          # Create repository secret `CONTAINER_USER_PASSWORD` (Settings → Secrets → Actions), or rename here and below.
-          CONTAINER_USER_PASSWORD: ${{ secrets.CONTAINER_USER_PASSWORD }}
-        run: |
-          printf '%s' "$SSH_CONFIG" > /tmp/ssh_config
-          printf '%s' "$CONTAINER_USER_PASSWORD" > /tmp/container_user_password
-
       - name: Build and push base
         id: build
         uses: docker/build-push-action@v7
@@ -90,9 +77,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             TZ=UTC
-          secret-files: |
-            ssh_config=/tmp/ssh_config
-            container_user_password=/tmp/container_user_password
           cache-from: type=gha,scope=base
           cache-to: type=gha,mode=max,scope=base
 
@@ -343,13 +327,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # config/.gitconfig is gitignored, so write it from repo variable GITCONFIG before Dockerfile.agent
-      # COPYs it. Assign via env: to preserve multiline values. Empty/unset → builds with no Git identity.
-      - name: Write personal gitconfig
-        env:
-          GITCONFIG: ${{ vars.GITCONFIG }}
-        run: printf '%s' "$GITCONFIG" > config/.gitconfig
 
       - name: Extract metadata
         id: meta

@@ -33,8 +33,8 @@ RUN curl -fsSL https://herdr.dev/install.sh | sh && \
 # https://microsoft.github.io/apm/
 RUN curl -sSL https://aka.ms/apm-unix | APM_INSTALL_DIR="$HOME/.local/bin" sh
 
-# Personal Git identity (gitignored, not committed). Provide config/.gitconfig locally before building.
-COPY --chown=$USERNAME:$USERNAME config/.gitconfig /home/$USERNAME/.gitconfig
+# Personal Git identity is NOT baked in. It is injected at runtime via a
+# docker-compose.override.yml bind mount (config/.gitconfig → ~/.gitconfig); see the .example.
 
 # Agent helper scripts (config.sh applies dotfiles via chezmoi/just, both from lower layers).
 # Commented for now, the home folder is mounted as a volume thus any changes get overwritten on container start.

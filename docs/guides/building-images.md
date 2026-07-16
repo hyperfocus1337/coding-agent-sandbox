@@ -34,25 +34,23 @@ In **GitHub Actions** (`.github/workflows/docker-devcontainer.yml`), five indepe
 
 Tool and language versions are not build-args: they are pinned in `mise.toml` and installed per layer with `mise install` (see [version-management.md](version-management.md)).
 
-## SSH client config
+## Personal state (runtime, not baked)
 
-SSH client config uses the optional BuildKit secret `ssh_config` (same mechanism locally and in GitHub Actions: repo secret `SSH_CONFIG` → `secret-files`). If the secret is missing or empty, the image is built without `~/.ssh/config` (known_hosts for `github.com` is still added).
+The images ship with **no** personal state, so they are safe to publish. Git identity, SSH client config, SSH keys and the `sudo` password are injected at runtime through gitignored bind mounts in `.devcontainer/docker-compose.override.yml` (copy `docker-compose.override.yml.example` and edit the paths). The base image only seeds `~/.ssh/known_hosts` for `github.com`; the sudo password is applied by `entrypoint.sh` from a root-only mount (see [sudo-password.md](sudo-password.md)). See [mounting-projects.md](mounting-projects.md) for the override pattern.
 
 ## Overridable variables
 
 The following variables can be overridden at invocation time (see the `Justfile` for the full list):
 
-| Variable             | Default                                                            | Description                                                                                                                                                          |
-|----------------------|--------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `TZ`                 | `Europe/Amsterdam` (or `$TZ` from the environment)                 | Timezone baked into the image                                                                                                                                        |
-| `IMAGE_BASE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`    | Registry/repository path for the base image (`Dockerfile.base`)                                                                                                      |
-| `IMAGE_NODE`         | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node`    | Registry/repository path for the Node child image (`Dockerfile.node`)                                                                                                |
-| `IMAGE_TOOLING`      | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling` | Registry/repository path for the tooling child image (`Dockerfile.tooling`)                                                                                          |
-| `IMAGE_PYTHON`       | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python`  | Registry/repository path for the Python + Playwright child image (`Dockerfile.python`)                                                                               |
-| `IMAGE_AGENT`        | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent`   | Registry/repository path for the agent top image (`Dockerfile.agent`)                                                                                                |
-| `VERSION`            | `local`                                                            | Primary image tag for **all five** images (also written into `IMAGE_VERSION` for the base image stamp)                                                               |
-| `SUDO_PASSWORD_FILE` | `config/.sudo-password`                                            | Optional one-line disposable password file; passed as secret `container_user_password` so it does **not** land in image history                                      |
-| `SSH_CONFIG_FILE`    | `config/.ssh/config`                                               | If this path exists and is non-empty, it is passed as secret `ssh_config`; otherwise the build skips SSH client config (mirrors unset/empty `SSH_CONFIG` in Actions) |
+| Variable        | Default                                                            | Description                                                                                            |
+|-----------------|--------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `TZ`            | `Europe/Amsterdam` (or `$TZ` from the environment)                 | Timezone baked into the image                                                                          |
+| `IMAGE_BASE`    | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`    | Registry/repository path for the base image (`Dockerfile.base`)                                        |
+| `IMAGE_NODE`    | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node`    | Registry/repository path for the Node child image (`Dockerfile.node`)                                  |
+| `IMAGE_TOOLING` | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-tooling` | Registry/repository path for the tooling child image (`Dockerfile.tooling`)                            |
+| `IMAGE_PYTHON`  | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python`  | Registry/repository path for the Python + Playwright child image (`Dockerfile.python`)                 |
+| `IMAGE_AGENT`   | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent`   | Registry/repository path for the agent top image (`Dockerfile.agent`)                                  |
+| `VERSION`       | `local`                                                            | Primary image tag for **all five** images (also written into `IMAGE_VERSION` for the base image stamp) |
 
 Example, override the timezone:
 

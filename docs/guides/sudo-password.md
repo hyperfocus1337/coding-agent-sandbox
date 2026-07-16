@@ -1,26 +1,30 @@
 # Sudo password for ad-hoc package installs
 
-The base image does not put `node` in the `sudo` group or set a login password. The image adds `node` to `sudo` and, if BuildKit secret `container_user_password` is provided (`just build` forwards `SUDO_PASSWORD_FILE` when that path exists), sets a disposable login password via `chpasswd`.
+The base image adds `node` to the `sudo` group but bakes in **no** password, so nothing personal ships in the published images. Instead the password is seeded at **runtime**: `entrypoint.sh` (running as root) reads a mounted file and applies it to `node` before dropping to `node` to run the container.
+
+This password is the privilege boundary that protects the container from a rogue agent: the agent runs as `node`, and without the password it cannot `sudo` to root. The plaintext is mounted into `/root` (mode `0700`), so `node` — and the agent — can neither read it nor reset `node`'s password.
 
 ## Setting the password
 
-Use a **throwaway** one-line secret only. Prefer a gitignored file (default `config/.sudo-password`), not repeated command-line literals. The build strips CR/LF line endings from that file so Windows-style `CRLF` does not change the password versus what you type.
+Put a **throwaway** one-line secret in the gitignored default file, then (re)create the container so the entrypoint seeds it:
 
 ```bash
 printf '%s\n' 'your-dev-only-secret' > config/.sudo-password
-just build
+just up   # recreates the container; entrypoint applies the password
 ```
 
-## Runtime caveat
+The mount lives in `.devcontainer/docker-compose.override.yml` (see the `.example`):
 
-**The running image must have been built with the secret.** A `prebuild` or `:latest` pull from GHCR only has a password if CI set the `CONTAINER_USER_PASSWORD` secret when that image was built; your local `config/.sudo-password` is not read at runtime. To confirm whether `node` has a password, run `docker exec -u root -it <container-name> passwd -S node` (`P` means a password is set; `NP` / locked means `sudo` auth will always fail until you rebuild with the secret or run `passwd node` as root).
-
-If that file is absent, password-based `sudo` is unavailable until a root-capable step sets one, for example:
-
-```bash
-docker exec -u root -it coding-agent-sandbox-devcontainer passwd node
+```yaml
+- ../config/.sudo-password:/root/.sudo-password:ro
 ```
+
+CR/LF is stripped from the file, so a Windows-style `CRLF` save does not change the password versus what you type.
+
+## Checking / skipping
+
+To confirm the password is set: `docker exec -u root -it coding-agent-sandbox-devcontainer passwd -S node` (`P` means set; `NP` / locked means no seed file was mounted). If you never need password `sudo`, omit the mount and run one-off root commands with `docker exec -u root` instead.
 
 ## GitHub Actions
 
-For **GitHub Actions** builds, optionally add a repository secret `CONTAINER_USER_PASSWORD` (same one-line throwaway value); the workflow writes it to a BuildKit secret so the image gets an interactive `sudo` password without a `--build-arg`. Leave the secret unset to skip (typical for CI).
+Nothing to configure. The password is never baked into the image, so the CI build needs no `CONTAINER_USER_PASSWORD` secret — you can delete that repository secret if it still exists.

@@ -76,28 +76,12 @@ pull:
 
 TZ := env("TZ", "Europe/Amsterdam")
 VERSION := "local"
-SSH_CONFIG_FILE := "config/.ssh/config"
-
-# Optional: one-line file with a disposable Unix password for `$USERNAME` (BuildKit secret
-# `container_user_password`; not stored in image history like a `--build-arg`). Omit for CI.
-SUDO_PASSWORD_FILE := "config/.sudo-password"
 
 # Base devcontainer image (OS apt packages + shell/identity + mise, no Node, no developer tooling).
-# Tags :latest for the node stage FROM.
+# Tags :latest for the node stage FROM. No personal state baked in: git identity, ssh config
+# and keys are injected at runtime via .devcontainer/docker-compose.override.yml bind mounts.
 build-base:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    SECRET_ARGS=()
-    # Check if the SSH config file exists (-f) and is not empty (-s)
-    if [[ -f "{{ SSH_CONFIG_FILE }}" ]] && [[ -s "{{ SSH_CONFIG_FILE }}" ]]; then
-        SECRET_ARGS+=(--secret id=ssh_config,src="{{ SSH_CONFIG_FILE }}")
-    fi
-    # Check if the sudo password file exists (-f) and is not empty (-s)
-    if [[ -f "{{ SUDO_PASSWORD_FILE }}" ]] && [[ -s "{{ SUDO_PASSWORD_FILE }}" ]]; then
-        SECRET_ARGS+=(--secret id=container_user_password,src="{{ SUDO_PASSWORD_FILE }}")
-    fi
     docker build \
-        "${SECRET_ARGS[@]}" \
         --build-arg TZ="{{ TZ }}" \
         --build-arg IMAGE_VERSION="{{ VERSION }}-$(date +%Y%m%d%H%M%S)" \
         --tag "{{ IMAGE_BASE }}:{{ VERSION }}" \

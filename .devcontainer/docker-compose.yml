@@ -4,6 +4,11 @@ services:
   sandbox:
     image: ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent:latest
     container_name: coding-agent-sandbox-devcontainer
+    # Start as root so entrypoint.sh can seed node's sudo password from the root-only
+    # mount (see docker-compose.override.yml), then it drops to node to run the command.
+    # remoteUser (devcontainer.json) keeps interactive/agent shells as node.
+    user: root
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
     command: sleep infinity
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"

@@ -10,5 +10,17 @@
 services:
   sandbox:
     volumes:
+      # Personal state injected at RUNTIME so the published images stay clean.
+      # These files are gitignored; ../ is relative to this .devcontainer/ directory.
+      - ../config/.gitconfig:/home/node/.gitconfig:ro
+      - ../config/.ssh/config:/home/node/.ssh/config:ro
+      # SSH private keys (mount whichever you use; keys never enter the image).
+      - ${HOME}/.ssh/your-key:/home/node/.ssh/your-key:ro
+      # Sudo password seed (one-line file). Mounted into /root (mode 0700) so node/the
+      # agent cannot read the plaintext; entrypoint.sh applies it to node as root at
+      # startup. Create it first: printf '%s\n' 'your-dev-secret' > config/.sudo-password
+      - ../config/.sudo-password:/root/.sudo-password:ro
+
+      # Sibling repos to edit from inside the container.
       - ${HOME}/Repositories/your-org/repo-a:/workspaces/repo-a:delegated
       - ${HOME}/Repositories/your-org/repo-b:/workspaces/repo-b:delegated

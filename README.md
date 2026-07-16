@@ -72,15 +72,15 @@ The devcontainer is built from a layered stack of images (`base` → `node` → 
 
 How-to and reference guides for building, configuring, and running the sandbox.
 
-| Doc                                                                | Covers                                                                                              |
-|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| [building-images.md](docs/guides/building-images.md)               | Building the image layers: single-layer builds, `BASE_IMAGE`, CI, SSH config, overridable variables |
-| [version-management.md](docs/guides/version-management.md)         | How languages and pinned tools are installed and versioned via mise                                 |
-| [timezone.md](docs/guides/timezone.md)                             | Setting the container timezone via the `TZ` build variable (default `Europe/Amsterdam`, UTC+2)      |
-| [sudo-password.md](docs/guides/sudo-password.md)                   | Enabling `sudo` for ad-hoc package installs via a disposable password                               |
-| [watchtower.md](docs/guides/watchtower.md)                         | Auto-updating containers from GHCR with Watchtower                                                  |
-| [sharing-claude-history.md](docs/guides/sharing-claude-history.md) | Migrating Claude Code conversation history across machines or Docker volumes                        |
-| [nvim.md](docs/guides/nvim.md)                                     | Minimal Neovim setup for editing in-container, with yank landing on the host clipboard              |
+| Doc                                                                | Covers                                                                                                          |
+|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| [building-images.md](docs/guides/building-images.md)               | Building the image layers: single-layer builds, `BASE_IMAGE`, CI, runtime personal state, overridable variables |
+| [version-management.md](docs/guides/version-management.md)         | How languages and pinned tools are installed and versioned via mise                                             |
+| [timezone.md](docs/guides/timezone.md)                             | Setting the container timezone via the `TZ` build variable (default `Europe/Amsterdam`, UTC+2)                  |
+| [sudo-password.md](docs/guides/sudo-password.md)                   | Enabling `sudo` for ad-hoc package installs by setting a password at runtime                                    |
+| [watchtower.md](docs/guides/watchtower.md)                         | Auto-updating containers from GHCR with Watchtower                                                              |
+| [sharing-claude-history.md](docs/guides/sharing-claude-history.md) | Migrating Claude Code conversation history across machines or Docker volumes                                    |
+| [nvim.md](docs/guides/nvim.md)                                     | Minimal Neovim setup for editing in-container, with yank landing on the host clipboard                          |
 
 ## Lessons learned (while building this project)
 
