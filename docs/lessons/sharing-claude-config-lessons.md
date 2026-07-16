@@ -5,7 +5,7 @@
 Bind-mounting the host `~/.claude` directory into a devcontainer:
 
 ```json
-"source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind"
+"source=${localEnv:HOME}/.claude,target=/home/user/.claude,type=bind"
 ```
 
 The intent was to share Claude settings, MCP server configs, and installed plugins between the host machine and the container without duplication.

@@ -2,7 +2,7 @@
 
 set -e
 
-USERNAME=node
+USERNAME=user
 
 # Create repositories directory
 mkdir -p /home/$USERNAME/repositories

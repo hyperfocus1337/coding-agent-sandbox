@@ -9,7 +9,7 @@ ARG TZ
 ENV TZ="$TZ"
 
 # Username for the non-root user
-ARG USERNAME=node
+ARG USERNAME=user
 ARG USER_UID=1000
 ARG USER_GID=1000
 
@@ -65,7 +65,7 @@ ENV MISE_DATA_DIR="/usr/local/share/mise"
 ENV MISE_CONFIG_DIR="/usr/local/share/mise"
 ENV PATH="/usr/local/share/mise/shims:$PATH"
 
-# Ensure default node user has access to /usr/local/share (npm globals + mise data)
+# Ensure the unprivileged user has access to /usr/local/share (npm globals + mise data)
 RUN mkdir -p /usr/local/share/npm-global /usr/local/share/mise && \
     chown -R $USERNAME:$USERNAME /usr/local/share
 
@@ -83,15 +83,15 @@ RUN mkdir -p /workspace \
 
 WORKDIR /workspaces
 
-# Sudo for ad-hoc root installs (`sudo apt install …`). The official node image does not
-# put `node` in the sudo group. No password is baked in — nothing personal ships in the
+# Sudo for ad-hoc root installs (`sudo apt install …`). The user we created above is
+# not in the sudo group by default. No password is baked in — nothing personal ships in the
 # image. The password is seeded at runtime by entrypoint.sh from a root-only mounted file
 # (see docker-compose + scripts/container/entrypoint.sh); this protects the container from
-# a rogue agent, since the node user can neither read the plaintext nor sudo without it.
+# a rogue agent, since the user can neither read the plaintext nor sudo without it.
 RUN usermod -aG sudo "$USERNAME"
 
-# Runtime entrypoint (generic, no personal data). Seeds node's sudo password from a
-# root-only mount if present, then drops to node to run the compose command.
+# Runtime entrypoint (generic, no personal data). Seeds user's sudo password from a
+# root-only mount if present, then drops to user to run the compose command.
 COPY --chmod=0755 scripts/container/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Drop to non-root user for runtime

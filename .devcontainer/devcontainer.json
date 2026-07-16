@@ -3,7 +3,7 @@
   "dockerComposeFile": ["docker-compose.yml", "docker-compose.override.yml"],
   "service": "sandbox",
   "workspaceFolder": "/workspaces/coding-agent-sandbox",
-  "remoteUser": "node",
+  "remoteUser": "user",
   "forwardPorts": [3000, 8080, 8976],
   "portsAttributes": {
     "3000": {

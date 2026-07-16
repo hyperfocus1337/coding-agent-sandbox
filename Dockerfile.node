@@ -6,8 +6,8 @@
 ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base:latest
 FROM ${BASE_IMAGE}
 
-# Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
-ARG USERNAME=node
+# Base image declares ARG USERNAME=user but does not export it as ENV, so re-declare here.
+ARG USERNAME=user
 
 # Numeric uid/gid for `--mount=type=cache,uid=,gid=` below — must match the non-root user
 # so npm cache writes are owned correctly.

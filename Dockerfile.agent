@@ -9,8 +9,8 @@
 ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-python:latest
 FROM ${BASE_IMAGE}
 
-# Base image declares ARG USERNAME=node but does not export it as ENV, so re-declare here.
-ARG USERNAME=node
+# Base image declares ARG USERNAME=user but does not export it as ENV, so re-declare here.
+ARG USERNAME=user
 
 # ----- Script-based AI installers and agent config -----
 USER $USERNAME

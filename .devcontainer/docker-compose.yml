@@ -4,15 +4,15 @@ services:
   sandbox:
     image: ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent:latest
     container_name: coding-agent-sandbox-devcontainer
-    # Start as root so entrypoint.sh can seed node's sudo password from the root-only
-    # mount (see docker-compose.override.yml), then it drops to node to run the command.
-    # remoteUser (devcontainer.json) keeps interactive/agent shells as node.
+    # Start as root so entrypoint.sh can seed user's sudo password from the root-only
+    # mount (see docker-compose.override.yml), then it drops to user to run the command.
+    # remoteUser (devcontainer.json) keeps interactive/agent shells as user.
     user: root
     entrypoint: ["/usr/local/bin/entrypoint.sh"]
     command: sleep infinity
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
-      CLAUDE_CONFIG_DIR: /home/node/.claude
+      CLAUDE_CONFIG_DIR: /home/user/.claude
       WORKSPACE_FOLDER: /workspaces/coding-agent-sandbox
     ports:
       - "3000:3000"
@@ -23,21 +23,21 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     volumes:
       - ..:/workspaces/coding-agent-sandbox:cached
-      - coding-agent-sandbox-claude-config:/home/node/.claude
-      - coding-agent-sandbox-gitlab-duo-config:/home/node/.gitlab
-      - coding-agent-sandbox-gitlab-cli-config:/home/node/.config/glab-cli
-      - coding-agent-sandbox-aws-cli-config:/home/node/.aws
-      - coding-agent-sandbox-azure-cli-config:/home/node/.azure
-      - coding-agent-sandbox-oracle-cli-config:/home/node/.oci
-      - coding-agent-sandbox-opencode-auth:/home/node/.local/share/opencode
-      - coding-agent-sandbox-opencode-config:/home/node/.opencode
-      - coding-agent-sandbox-cursor-state:/home/node/.cursor-server
-      - coding-agent-sandbox-vscode-state:/home/node/.vscode-server
-      - coding-agent-sandbox-fish-history:/home/node/.local/share/fish
-      - coding-agent-sandbox-ssh-config:/home/node/.ssh
-      - coding-agent-sandbox-gemini-config:/home/node/.gemini
-      - coding-agent-sandbox-codex-config:/home/node/.codex
-      - coding-agent-sandbox-ccstatusline-config:/home/node/.config/ccstatusline
+      - coding-agent-sandbox-claude-config:/home/user/.claude
+      - coding-agent-sandbox-gitlab-duo-config:/home/user/.gitlab
+      - coding-agent-sandbox-gitlab-cli-config:/home/user/.config/glab-cli
+      - coding-agent-sandbox-aws-cli-config:/home/user/.aws
+      - coding-agent-sandbox-azure-cli-config:/home/user/.azure
+      - coding-agent-sandbox-oracle-cli-config:/home/user/.oci
+      - coding-agent-sandbox-opencode-auth:/home/user/.local/share/opencode
+      - coding-agent-sandbox-opencode-config:/home/user/.opencode
+      - coding-agent-sandbox-cursor-state:/home/user/.cursor-server
+      - coding-agent-sandbox-vscode-state:/home/user/.vscode-server
+      - coding-agent-sandbox-fish-history:/home/user/.local/share/fish
+      - coding-agent-sandbox-ssh-config:/home/user/.ssh
+      - coding-agent-sandbox-gemini-config:/home/user/.gemini
+      - coding-agent-sandbox-codex-config:/home/user/.codex
+      - coding-agent-sandbox-ccstatusline-config:/home/user/.config/ccstatusline
       # Additional workspace bind mounts (local repo paths) live in
       # docker-compose.override.yml — gitignored and merged at runtime.
 

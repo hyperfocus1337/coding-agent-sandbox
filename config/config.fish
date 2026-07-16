@@ -7,7 +7,7 @@ alias vim nvim
 set -x ENABLE_CLAUDEAI_MCP_SERVERS false
 
 # Add local bin directory
-fish_add_path "/home/node/.local/bin"
+fish_add_path "/home/user/.local/bin"
 
 # direnv hook for automatic .envrc loading
 direnv hook fish | source

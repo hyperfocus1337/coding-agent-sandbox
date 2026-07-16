@@ -33,7 +33,7 @@ Controls the history session **name** (e.g. switching between named histories), 
 Mount the named volume **directly at the path fish natively writes to**:
 
 ```json
-"source=my-fish-history,target=/home/node/.local/share/fish,type=volume"
+"source=my-fish-history,target=/home/user/.local/share/fish,type=volume"
 ```
 
 Fish reads and writes `fish_history` entirely within the volume. All temp files and the final rename happen on the same device — no cross-device issue.

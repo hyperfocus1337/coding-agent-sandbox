@@ -134,7 +134,7 @@ The file must exist on disk — `devcontainer.json` references it explicitly, so
   "dockerComposeFile": ["docker-compose.yml", "docker-compose.override.yml"],
   "service": "sandbox",
   "workspaceFolder": "/workspaces/coding-agent-sandbox",
-  "remoteUser": "node",
+  "remoteUser": "user",
   "forwardPorts": [ … ],
   "portsAttributes": { … },
   "customizations": { "vscode": { … } }

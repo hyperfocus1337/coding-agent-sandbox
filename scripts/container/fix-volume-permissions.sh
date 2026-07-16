@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Chown all named-volume mount targets in the sandbox container back to node:node.
-# Fresh Docker named volumes are created root-owned, so the node user can't write
+# Chown all named-volume mount targets in the sandbox container back to user:user.
+# Fresh Docker named volumes are created root-owned, so the user can't write
 # to them until fixed. Targets are read from the compose file so this never drifts
 # from the volume list. Runs as root (-u 0) inside the container; no sudo needed.
 #
@@ -29,7 +29,7 @@ printf '  %s\n' "${targets[@]}"
 # chown -R continues past errors but exits non-zero. Read-only bind mounts
 # nested in a volume (e.g. the :ro SSH keys under .ssh) are host-owned and
 # can't be chowned; those failures are expected. Fail only on anything else.
-errs="$(docker exec -u 0 "$CONTAINER" chown -R node:node "${targets[@]}" 2>&1 >/dev/null)" || true
+errs="$(docker exec -u 0 "$CONTAINER" chown -R user:user "${targets[@]}" 2>&1 >/dev/null)" || true
 if real="$(grep -v 'Read-only file system' <<<"$errs")" && [[ -n "$real" ]]; then
     echo "$real" >&2
     exit 1

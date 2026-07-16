@@ -31,7 +31,7 @@ The folder must match the project's absolute path on the **target** machine. Der
 
 | Source path                           | Target path                                                              |
 | ------------------------------------- | ------------------------------------------------------------------------ |
-| `/Users/user/.claude/projects/myrepo` | `/home/node/.claude/projects/-workspace-${localWorkspaceFolderBasename}` |
+| `/Users/user/.claude/projects/myrepo` | `/home/user/.claude/projects/-workspace-${localWorkspaceFolderBasename}` |
 
 ### 4. Copy and rename in one step
 
@@ -62,7 +62,7 @@ Your sessions should now appear in the resume picker.
 ### Restart again
 
 ```bash
-docker exec -it -u root coding-agent-sandbox-devcontainer rm -rf /home/node/.claude/projects/-workspace-${localWorkspaceFolderBasename}
+docker exec -it -u root coding-agent-sandbox-devcontainer rm -rf /home/user/.claude/projects/-workspace-${localWorkspaceFolderBasename}
 ```
 
 ## What to copy and what not to

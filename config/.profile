@@ -11,7 +11,7 @@ export VISUAL=vim
 export KUBE_EDITOR=vim
 
 # Add local bin directory
-export PATH="/home/node/.local/bin:$PATH"
+export PATH="/home/user/.local/bin:$PATH"
 
 # direnv hook for automatic .envrc loading
 eval "$(direnv hook bash)"
