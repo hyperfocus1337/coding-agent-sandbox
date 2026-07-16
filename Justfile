@@ -201,6 +201,27 @@ rm:
     docker rm {{ CONTAINER }}
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Docker maintenance
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Remove dangling images (untagged <none> layers left behind by rebuilds).
+prune-images:
+    docker image prune -f
+
+# Remove stopped containers, unused networks, dangling images and build cache.
+# Safe: keeps named volumes and in-use images. Add `-a` yourself for a deeper clean.
+prune:
+    docker system prune -f
+
+# Reclaim build cache only (leaves images/containers alone).
+prune-build-cache:
+    docker builder prune -f
+
+# Show what Docker is using disk on (images, containers, volumes, build cache).
+disk-usage:
+    docker system df
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Watchtower — auto-pull private GHCR images (compose service + just update)
 # ──────────────────────────────────────────────────────────────────────────────
 
