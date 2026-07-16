@@ -34,22 +34,24 @@ devcontainer-enter:
     devcontainer exec fish
 
 # Enter the devcontainer with a shell (using docker exec).
+# -u node: the container runs `user: root` so entrypoint.sh can seed the sudo
+# password, but exec sessions must land as node (docker exec defaults to root).
 docker-enter:
-    docker exec -it {{ CONTAINER }} fish
+    docker exec -it -u node {{ CONTAINER }} fish
 
 # Step into a project directory and open a shell there (e.g. `just cd my-project`).
 cd PROJECT_NAME:
-    docker exec -it {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}"
+    docker exec -it -u node {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}"
 
 # Step into a project directory and run Claude there (e.g. `just claude my-project`).
 claude PROJECT_NAME:
-    docker exec -it {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions"
+    docker exec -it -u node {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions"
 
 # Runs extensions/install.sh from the coding-agent-config repo that config.sh clones at build.
 # Skipped during the image build (the ~/.claude dir is a mounted volume); run once the container is up.
 # Install agent extensions (Claude plugins/skills/MCP servers) in the running devcontainer.
 install-extensions:
-    docker exec -it {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
+    docker exec -it -u node {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Registry
