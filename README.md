@@ -1,6 +1,6 @@
 # Coding agent sandbox
 
-A secure, containerized sandbox for running coding agents (Claude Code, Codex, Gemini, and others). It is a [Dev Container](https://containers.dev/) that runs agents against a pinned, reproducible toolchain isolated from the host rather than directly on your machine. The container runs as the non-root `node` user, and every tool and language version is pinned in [`mise.toml`](mise.toml).
+A secure, containerized sandbox for running coding agents (Claude Code, Codex, Gemini, and others). It is a [Dev Container](https://containers.dev/) that runs agents against a pinned, reproducible toolchain isolated from the host rather than directly on your machine. The container runs as an unprivileged non-root `user`, and every tool and language version is pinned in [`mise.toml`](mise.toml).
 
 ## Quick start
 

@@ -16,7 +16,7 @@ The intent was to share Claude settings, MCP server configs, and installed plugi
 
 ### 1. Plugin Paths Are Absolute and Host-Specific
 
-Claude Code plugins (installed via `claude mcp add` or similar) store **absolute paths** inside `~/.claude`. These paths point to locations on the **host filesystem** (e.g. `/Users/sjors/.npm-global/...` or `/home/sjors/.nvm/...`) that do not exist inside the container, causing resolution failures at startup or plugin invocation.
+Claude Code plugins (installed via `claude mcp add` or similar) store **absolute paths** inside `~/.claude`. These paths point to locations on the **host filesystem** (e.g. `/Users/you/.npm-global/...` or `/home/you/.nvm/...`) that do not exist inside the container, causing resolution failures at startup or plugin invocation.
 
 ### 2. Node/npm Binary Paths Diverge
 
@@ -40,7 +40,7 @@ Bind-mounting the entire directory imports the environment-specific parts wholes
 ## Recommended Approach
 
 | Concern            | Strategy                                                                                                                      |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+|--------------------|-------------------------------------------------------------------------------------------------------------------------------|
 | API key            | Pass via `ANTHROPIC_API_KEY` env var (devcontainer `containerEnv`)                                                            |
 | MCP server config  | Maintain a separate `~/.claude/claude_desktop_config.json` (or equivalent) inside the container, with container-correct paths |
 | Plugins            | Re-install inside the container using container-local paths; do not bind-mount from host                                      |
