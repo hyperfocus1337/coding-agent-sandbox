@@ -60,10 +60,11 @@ uv tool install "markitdown[all]"
 # markitdown-mcp: MCP server exposing markitdown to agents.
 uv tool install markitdown-mcp
 
-# Ansible: the `ansible` package (not `ansible-core`) so the batteries-included community
-# collections come along. Exposes ansible, ansible-playbook, ansible-galaxy, etc.
-# Add module deps later with `uv tool install --with`.
-uv tool install ansible
+# Ansible: install ansible-core as the primary tool so uv exposes its CLIs (ansible,
+# ansible-playbook, ansible-galaxy, ansible-vault, ...). `--with ansible` injects the
+# batteries-included community collections into the same venv. Installing `ansible`
+# directly would only expose the `ansible-community` script, not the core commands.
+uv tool install --with ansible ansible-core
 EOF
 
 # ===== Playwright (merged from the former Dockerfile.playwright layer) =====
