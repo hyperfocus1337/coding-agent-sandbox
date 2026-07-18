@@ -35,9 +35,9 @@ default:
 devcontainer-enter:
     devcontainer exec fish
 
-# Enter the devcontainer with a shell (using docker exec).
 # -u user: the container runs `user: root` so entrypoint.sh can seed the sudo
 # password, but exec sessions must land as user (docker exec defaults to root).
+# Enter the devcontainer with a shell (using docker exec).
 [group('access')]
 docker-enter:
     docker exec -it -u user {{ CONTAINER }} fish
@@ -86,9 +86,9 @@ pull:
 TZ := env("TZ", "Europe/Amsterdam")
 VERSION := "local"
 
-# Base devcontainer image (OS apt packages + shell/identity + mise, no Node, no developer tooling).
 # Tags :latest for the node stage FROM. No personal state baked in: git identity, ssh config
 # and keys are injected at runtime via .devcontainer/docker-compose.override.yml bind mounts.
+# Base devcontainer image (OS apt packages + shell/identity + mise, no Node, no developer tooling).
 [group('build')]
 build-base:
     docker build \
@@ -149,9 +149,9 @@ build: build-base build-node build-tooling build-python build-agent
 
 COMPOSE_FILES := "-f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml"
 
-# Create the named volumes referenced by .devcontainer/docker-compose.yml (idempotent).
 # Run once on a fresh machine before `just up`; the compose file declares them
 # `external: true`, so they must exist before `devcontainer up` / `docker compose up`.
+# Create the named volumes referenced by .devcontainer/docker-compose.yml (idempotent).
 [group('lifecycle')]
 init-volumes:
     #!/usr/bin/env bash
@@ -168,10 +168,10 @@ init-volumes:
 fix-volume-permissions:
     bash scripts/container/fix-volume-permissions.sh
 
-# Append a project bind mount to the compose override, then restart to mount it.
 # PROJECT is the path under ~/Repositories (e.g. `agents/my-project`); the last
 # segment becomes the /workspaces target. CONSISTENCY defaults to delegated.
 # See docs/guides/mounting-projects.md.
+# Append a project bind mount to the compose override, then restart to mount it.
 [group('lifecycle')]
 add-project PROJECT CONSISTENCY="delegated":
     #!/usr/bin/env bash
@@ -232,8 +232,8 @@ rm:
 prune-images:
     docker image prune -f
 
-# Remove stopped containers, unused networks, dangling images and build cache.
 # Safe: keeps named volumes and in-use images. Add `-a` yourself for a deeper clean.
+# Remove stopped containers, unused networks, dangling images and build cache.
 [group('maintenance')]
 prune:
     docker system prune -f
