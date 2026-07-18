@@ -52,7 +52,8 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     jq \
     tree \
     man-db \
-    postgresql-client && \
+    postgresql-client \
+    sqlite3 && \
     ln -s "$(command -v fdfind)" /usr/local/bin/fd && \
     ln -s "$(command -v batcat)" /usr/local/bin/bat
 
