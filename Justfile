@@ -22,34 +22,40 @@ IMAGE_AGENT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent"
 # ──────────────────────────────────────────────────────────────────────────────
 
 # List all available recipes (default when running `just` with no arguments).
+# --unsorted keeps recipes in source order (build chain, up before up-compose) instead of alphabetized.
 default:
-    @just --list
+    @just --list --unsorted
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Shell access
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Enter the devcontainer with a shell (using devcontainer CLI).
+[group('access')]
 devcontainer-enter:
     devcontainer exec fish
 
 # Enter the devcontainer with a shell (using docker exec).
 # -u user: the container runs `user: root` so entrypoint.sh can seed the sudo
 # password, but exec sessions must land as user (docker exec defaults to root).
+[group('access')]
 docker-enter:
     docker exec -it -u user {{ CONTAINER }} fish
 
 # Step into a project directory and open a shell there (e.g. `just cd my-project`).
+[group('access')]
 cd PROJECT_NAME:
     docker exec -it -u user {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}"
 
 # Step into a project directory and run Claude there (e.g. `just claude my-project`).
+[group('access')]
 claude PROJECT_NAME:
     docker exec -it -u user {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions"
 
 # Runs extensions/install.sh from the coding-agent-config repo that config.sh clones at build.
 # Skipped during the image build (the ~/.claude dir is a mounted volume); run once the container is up.
 # Install agent extensions (Claude plugins/skills/MCP servers) in the running devcontainer.
+[group('access')]
 install-extensions:
     docker exec -it -u user {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
 
@@ -58,6 +64,7 @@ install-extensions:
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Pull all images from GitHub Container Registry with latest tag.
+[group('registry')]
 pull:
     docker pull {{ IMAGE_BASE }}:latest
     docker pull {{ IMAGE_NODE }}:latest
@@ -82,6 +89,7 @@ VERSION := "local"
 # Base devcontainer image (OS apt packages + shell/identity + mise, no Node, no developer tooling).
 # Tags :latest for the node stage FROM. No personal state baked in: git identity, ssh config
 # and keys are injected at runtime via .devcontainer/docker-compose.override.yml bind mounts.
+[group('build')]
 build-base:
     docker build \
         --build-arg TZ="{{ TZ }}" \
@@ -92,6 +100,7 @@ build-base:
         .
 
 # Node layer on top of {{ IMAGE_BASE }}:latest (node/pnpm/yarn + all npm-global packages).
+[group('build')]
 build-node:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_BASE }}:latest" \
@@ -101,6 +110,7 @@ build-node:
         .
 
 # Tooling layer on top of {{ IMAGE_NODE }}:latest (general non-node dev tooling).
+[group('build')]
 build-tooling:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_NODE }}:latest" \
@@ -110,6 +120,7 @@ build-tooling:
         .
 
 # Python + Playwright layer on top of {{ IMAGE_TOOLING }}:latest (run after build-tooling or publish of :latest).
+[group('build')]
 build-python:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_TOOLING }}:latest" \
@@ -119,6 +130,7 @@ build-python:
         .
 
 # Agent layer on top of {{ IMAGE_PYTHON }}:latest (top of chain; the image the devcontainer runs).
+[group('build')]
 build-agent:
     docker build \
         --build-arg BASE_IMAGE="{{ IMAGE_PYTHON }}:latest" \
@@ -128,6 +140,7 @@ build-agent:
         .
 
 # Build all five images (base -> node -> tooling -> python -> agent).
+[group('build')]
 build: build-base build-node build-tooling build-python build-agent
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -139,6 +152,7 @@ COMPOSE_FILES := "-f .devcontainer/docker-compose.yml -f .devcontainer/docker-co
 # Create the named volumes referenced by .devcontainer/docker-compose.yml (idempotent).
 # Run once on a fresh machine before `just up`; the compose file declares them
 # `external: true`, so they must exist before `devcontainer up` / `docker compose up`.
+[group('lifecycle')]
 init-volumes:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -150,6 +164,7 @@ init-volumes:
     done
 
 # Chown all named-volume mount targets back to user:user (fresh volumes are root-owned).
+[group('lifecycle')]
 fix-volume-permissions:
     bash scripts/container/fix-volume-permissions.sh
 
@@ -157,6 +172,7 @@ fix-volume-permissions:
 # PROJECT is the path under ~/Repositories (e.g. `agents/my-project`); the last
 # segment becomes the /workspaces target. CONSISTENCY defaults to delegated.
 # See docs/guides/mounting-projects.md.
+[group('lifecycle')]
 add-project PROJECT CONSISTENCY="delegated":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -174,28 +190,35 @@ add-project PROJECT CONSISTENCY="delegated":
     just up
 
 # Start using docker compose by default.
+[group('lifecycle')]
 up: up-compose
 
 # Restart using docker compose by default.
+[group('lifecycle')]
 restart: restart-compose
 
 # Start the devcontainer.
+[group('lifecycle')]
 up-dev:
     devcontainer up
 
 # Start the devcontainer.
+[group('lifecycle')]
 up-compose:
     docker compose {{ COMPOSE_FILES }} up -d
 
 # Restart the devcontainer.
+[group('lifecycle')]
 restart-compose:
     docker compose {{ COMPOSE_FILES }} restart
 
 # Stop the devcontainer.
+[group('lifecycle')]
 stop:
     docker stop {{ CONTAINER }}
 
 # Remove the devcontainer (stop and delete).
+[group('lifecycle')]
 rm:
     docker stop {{ CONTAINER }}
     docker rm {{ CONTAINER }}
@@ -205,19 +228,23 @@ rm:
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Remove dangling images (untagged <none> layers left behind by rebuilds).
+[group('maintenance')]
 prune-images:
     docker image prune -f
 
 # Remove stopped containers, unused networks, dangling images and build cache.
 # Safe: keeps named volumes and in-use images. Add `-a` yourself for a deeper clean.
+[group('maintenance')]
 prune:
     docker system prune -f
 
 # Reclaim build cache only (leaves images/containers alone).
+[group('maintenance')]
 prune-build-cache:
     docker builder prune -f
 
 # Show what Docker is using disk on (images, containers, volumes, build cache).
+[group('maintenance')]
 disk-usage:
     docker system df
 
@@ -230,10 +257,12 @@ WATCHTOWER_DOCKER_CONFIG := "config/.watchtower-docker"
 WATCHTOWER_DOCKER_CONFIG_FILE := WATCHTOWER_DOCKER_CONFIG + "/config.json"
 
 # Sync config from $GHCR_TOKEN (or `gh`); once per machine / after token rotation. Pass --force to rewrite.
+[group('watchtower')]
 sync-watchtower-ghcr-auth *args:
     bash scripts/watchtower/sync-ghcr-auth.sh {{ args }}
 
 # Fail if config missing (run sync-watchtower-ghcr-auth first).
+[group('watchtower')]
 watchtower-auth-check:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -249,10 +278,12 @@ watchtower-auth-check:
 
 # --- Run ---
 # Reload compose Watchtower after sync.
+[group('watchtower')]
 restart-watchtower:
     docker compose {{ COMPOSE_FILES }} restart watchtower
 
 # One-shot pull + recreate labeled containers (--debug: progress during pull).
+[group('watchtower')]
 update: watchtower-auth-check
     #!/usr/bin/env bash
     set -euo pipefail
