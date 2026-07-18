@@ -21,28 +21,50 @@ RUN mise install python uv
 # from the base image). Without this, uv's default can vary by version.
 ENV UV_TOOL_BIN_DIR="/home/$USERNAME/.local/bin"
 
-# Ruff (Python linter/formatter) via uv tool install — lands in UV_TOOL_BIN_DIR set above.
-RUN uv tool install ruff
+# Python tooling via uv tool install — each lands in an isolated venv, entry points in UV_TOOL_BIN_DIR.
+RUN <<EOF
+set -e
 
-# Oracle Cloud Infrastructure (OCI) CLI via uv tool install (PyPI package `oci-cli`).
+# Ruff: Python linter/formatter.
+uv tool install ruff
+
+# Oracle Cloud Infrastructure (OCI) CLI (PyPI package `oci-cli`).
 # Lives here, not in the tooling image: it is a Python package and needs python3 + venv
 # (uv provisions an isolated venv per tool). The vendor install.sh is avoided on purpose —
 # it pulls an ancient virtualenv that breaks on Python 3.13 (`ModuleNotFoundError: pipes`).
 # https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm
 # Config file: ~/.oci/config — must be configured (e.g. `oci setup config`) before usage is enabled.
-RUN uv tool install oci-cli
+uv tool install oci-cli
 
-# Python tooling via uv tool install — each lands in an isolated venv, entry points in UV_TOOL_BIN_DIR.
-# ast-grep ships on PyPI as `ast-grep-cli` (binaries `ast-grep`/`sg`); python-gitlab ships the `gitlab` CLI.
-# pytest/pyright/pyrefly/semgrep expose their own entry points.
-RUN uv tool install ast-grep-cli && \
-    uv tool install pyright && \
-    uv tool install pytest && \
-    uv tool install pyrefly && \
-    uv tool install python-gitlab && \
-    uv tool install semgrep && \
-    uv tool install "markitdown[all]" && \
-    uv tool install markitdown-mcp
+# ast-grep: structural code search. Ships on PyPI as `ast-grep-cli` (binaries `ast-grep`/`sg`).
+uv tool install ast-grep-cli
+
+# pyright: Python type checker.
+uv tool install pyright
+
+# pytest: Python test runner.
+uv tool install pytest
+
+# pyrefly: Python type checker (Meta).
+uv tool install pyrefly
+
+# python-gitlab: ships the `gitlab` CLI.
+uv tool install python-gitlab
+
+# semgrep: static analysis / SAST.
+uv tool install semgrep
+
+# markitdown: convert files (PDF, Office, etc.) to Markdown; [all] pulls every format extra.
+uv tool install "markitdown[all]"
+
+# markitdown-mcp: MCP server exposing markitdown to agents.
+uv tool install markitdown-mcp
+
+# Ansible: the `ansible` package (not `ansible-core`) so the batteries-included community
+# collections come along. Exposes ansible, ansible-playbook, ansible-galaxy, etc.
+# Add module deps later with `uv tool install --with`.
+uv tool install ansible
+EOF
 
 # ===== Playwright (merged from the former Dockerfile.playwright layer) =====
 
