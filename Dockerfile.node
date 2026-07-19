@@ -44,6 +44,16 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g eslint
 
+# Oxlint (fast Rust-based JS/TS linter)
+# https://oxc.rs/docs/guide/usage/linter.html
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g oxlint
+
+# Biome (JS/TS/JSON linter + formatter)
+# https://biomejs.dev/guides/getting-started/
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g @biomejs/biome
+
 # Mermaid CLI (mmdc): render .mmd diagrams to SVG/PNG/PDF via a headless browser (puppeteer).
 # PUPPETEER_SKIP_DOWNLOAD stops puppeteer's postinstall from fetching its own Chromium (which
 # grabbed an arch-wrong amd64 build on arm64 and failed to launch); instead we point it at the
