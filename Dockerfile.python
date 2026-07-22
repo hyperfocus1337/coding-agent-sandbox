@@ -65,6 +65,9 @@ uv tool install markitdown-mcp
 # batteries-included community collections into the same venv. Installing `ansible`
 # directly would only expose the `ansible-community` script, not the core commands.
 uv tool install --with ansible ansible-core
+
+# ansible-lint: separate tool so its own CLI is exposed. Pulls ansible-core as a dep.
+uv tool install ansible-lint
 EOF
 
 # ===== Playwright (merged from the former Dockerfile.playwright layer) =====
