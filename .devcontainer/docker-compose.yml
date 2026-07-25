@@ -11,6 +11,9 @@ services:
     entrypoint: ["/usr/local/bin/entrypoint.sh"]
     command: sleep infinity
     environment:
+      # The GHCR image ships TZ=UTC; override at runtime so wall-clock output
+      # (date, /usage reset times) reads Amsterdam local. See docs/guides/timezone.md.
+      TZ: "Europe/Amsterdam"
       NODE_OPTIONS: "--max-old-space-size=4096"
       CLAUDE_CONFIG_DIR: /home/user/.claude
       WORKSPACE_FOLDER: /workspaces/coding-agent-sandbox
