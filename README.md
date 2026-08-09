@@ -81,6 +81,7 @@ How-to and reference guides for building, configuring, and running the sandbox.
 | [watchtower.md](docs/guides/watchtower.md)                         | Auto-updating containers from GHCR with Watchtower                                                              |
 | [sharing-claude-history.md](docs/guides/sharing-claude-history.md) | Migrating Claude Code conversation history across machines or Docker volumes                                    |
 | [nvim.md](docs/guides/nvim.md)                                     | Minimal Neovim setup for editing in-container, with yank landing on the host clipboard                          |
+| [cmux-notifications.md](docs/guides/cmux-notifications.md)         | How `just claude` gets desktop notifications out of the container into cmux, and why the cmux wrapper cannot    |
 
 ## Lessons learned (while building this project)
 
