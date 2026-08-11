@@ -190,6 +190,16 @@ add-project PROJECT CONSISTENCY="delegated":
         exit 0
     fi
     printf '%s\n' "$line" >> "$override"
+    echo "mounted: $project"
+    # Applying the new mount recreates the container, which kills anything running
+    # inside it (agents, shells). Only worth asking when it is actually up.
+    if [[ -n "$(docker ps -q -f name="{{ CONTAINER }}")" ]]; then
+        read -r -p "Restart the container to apply? Running agents/shells will be killed. [y/N] " ans
+        if [[ "$ans" != "y" && "$ans" != "Y" ]]; then
+            echo "Not restarted. Run \`just up\` when ready."
+            exit 0
+        fi
+    fi
     just up
 
 # Start using docker compose by default.
