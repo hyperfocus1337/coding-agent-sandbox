@@ -163,10 +163,13 @@ install-extensions:
     docker exec -it -u user {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
 
 # PROJECT is a path under ~/Repositories (`agents/my-project`) or any absolute
-# path; its last segment becomes the /workspaces target.
-# See docs/guides/mounting-projects.md.
-# Append a project bind mount to the compose override, then restart to mount it.
+# path; its last segment becomes the /workspaces target. Exits 3 when that mount
+# is already there. See docs/guides/mounting-projects.md.
+# no-exit-message: that exit 3 is a normal outcome, not a failed recipe. Keep the
+# description below it, just takes the last comment line as its `--list` text.
+# Append a project bind mount to the compose override (apply it with `just up`).
 [group('setup')]
+[no-exit-message]
 add-project PROJECT CONSISTENCY="delegated":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -185,20 +188,11 @@ add-project PROJECT CONSISTENCY="delegated":
     line="      - ${src}:/workspaces/$(basename "$project"):{{ CONSISTENCY }}"
     if grep -qF "$line" "$override"; then
         echo "already mounted: $project"
-        exit 0
+        exit 3
     fi
     printf '%s\n' "$line" >> "$override"
     echo "mounted: $project"
-    # Applying the new mount recreates the container, which kills anything running
-    # inside it (agents, shells). Only worth asking when it is actually up.
-    if [[ -n "$(docker ps -q -f name="{{ CONTAINER }}")" ]]; then
-        read -r -p "Restart the container to apply? Running agents/shells will be killed. [y/N] " ans
-        if [[ "$ans" != "y" && "$ans" != "Y" ]]; then
-            echo "Not restarted. Run \`just up\` when ready."
-            exit 0
-        fi
-    fi
-    just up
+    echo "Run \`just up\` to apply it, which recreates the container and kills whatever runs inside."
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Image builds

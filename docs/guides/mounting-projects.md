@@ -16,7 +16,7 @@ Use the `add-project` recipe instead of editing the file by hand:
 just add-project agents/my-project
 ```
 
-It appends the bind mount and then runs `just up` to restart the container with the new path mounted. The last path segment (`my-project`) becomes the `/workspaces` target.
+It appends the bind mount and prints how to apply it: `just up` recreates the container with the new path mounted, killing whatever runs inside it. `cas add` does the same but asks first, listing the Claude sessions the recreate would kill. The last path segment (`my-project`) becomes the `/workspaces` target.
 
 The `PROJECT` argument is a path under `~/Repositories`. All three forms normalize to the same entry, so you can tab-complete a full path and it still works:
 
@@ -40,4 +40,4 @@ Modes: `consistent` (default docker behavior, slow), `cached` (host authoritativ
 
 ## Dedup
 
-Re-running `add-project` for a path that is already mounted with the same consistency flag prints `already mounted: <project>` and skips the append and restart. The check keys on the full line, so re-adding the same project with a different consistency flag will append a second entry (change the existing line by hand if that is not what you want).
+Re-running `add-project` for a path that is already mounted with the same consistency flag prints `already mounted: <project>`, skips the append and exits 3, which is how `cas add` knows there is nothing to apply. The check keys on the full line, so re-adding the same project with a different consistency flag will append a second entry (change the existing line by hand if that is not what you want).
