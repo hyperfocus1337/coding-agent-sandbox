@@ -39,17 +39,20 @@ Alternatively, open the repo in VS Code or Cursor and choose **Reopen in Contain
 
 Run `just` with no arguments to list every recipe. The common ones:
 
-| Command                   | What it does                                                     |
-|---------------------------|------------------------------------------------------------------|
-| `just up`                 | Start the devcontainer (compose stack)                           |
-| `just stop` / `just rm`   | Stop / remove the container                                      |
-| `just docker-enter`       | Open a fish shell in the running container                       |
-| `just cd my-project`      | Open a shell already `cd`'d into a project directory             |
-| `just claude my-project`  | Start Claude Code inside a project directory                     |
-| `just install-extensions` | Install Claude plugins/skills/MCP servers (run once, after `up`) |
-| `just build`              | Build all five image layers locally                              |
-| `just pull`               | Pull the prebuilt images from GHCR                               |
-| `just update`             | One-shot Watchtower pull + recreate now                          |
+| Command                    | What it does                                                     |
+| -------------------------- | ---------------------------------------------------------------- |
+| `just up`                  | Start the devcontainer (compose stack)                           |
+| `just stop` / `just rm`    | Stop / remove the container                                      |
+| `just docker-enter`        | Open a fish shell in the running container                       |
+| `just cd my-project`       | Open a shell already `cd`'d into a project directory             |
+| `just claude my-project`   | Start Claude Code inside a project directory                     |
+| `just sessions`            | List the Claude sessions running in the container                |
+| `just resume my-project`   | Continue that project's most recent Claude session               |
+| `just resume-session <id>` | Resume one exact session by id, as `just sessions` prints it     |
+| `just install-extensions`  | Install Claude plugins/skills/MCP servers (run once, after `up`) |
+| `just build`               | Build all five image layers locally                              |
+| `just pull`                | Pull the prebuilt images from GHCR                               |
+| `just update`              | One-shot Watchtower pull + recreate now                          |
 
 ## What's inside
 
@@ -61,7 +64,7 @@ The devcontainer is built from a layered stack of images (`base` → `node` → 
 ### Configuration and scripts
 
 | Path                       | Description                                                                                                                                                                                          |
-|----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.devcontainer/`           | VS Code / Cursor Dev Container configuration (optional; this repo often gitignores this tree locally).                                                                                               |
 | `config/config.fish`       | Fish shell configuration (mise activation, Starship prompt, direnv hook, PATH).                                                                                                                      |
 | `scripts/agents/config.sh` | Runs at build (`Dockerfile.agent`): clones the `coding-agent-config` repo and applies dotfiles via chezmoi. Extensions (plugins/skills/MCP) are installed at runtime with `just install-extensions`. |
@@ -73,7 +76,7 @@ The devcontainer is built from a layered stack of images (`base` → `node` → 
 How-to and reference guides for building, configuring, and running the sandbox.
 
 | Doc                                                                | Covers                                                                                                          |
-|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | [building-images.md](docs/guides/building-images.md)               | Building the image layers: single-layer builds, `BASE_IMAGE`, CI, runtime personal state, overridable variables |
 | [version-management.md](docs/guides/version-management.md)         | How languages and pinned tools are installed and versioned via mise                                             |
 | [timezone.md](docs/guides/timezone.md)                             | Setting the container timezone via the `TZ` build variable (default `Europe/Amsterdam`, UTC+2)                  |
@@ -88,7 +91,7 @@ How-to and reference guides for building, configuring, and running the sandbox.
 Investigation notes and writeups from building the sandbox: approaches that were tried, why they did or did not work, and what the current setup settled on.
 
 | Doc                                                                               | Covers                                                                                           |
-|-----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | [brew-research.md](docs/lessons/brew-research.md)                                 | Whether Homebrew on Linux could replace the apt/mise package installs, and why it was rejected   |
 | [fish-history-docker-mounts.md](docs/lessons/fish-history-docker-mounts.md)       | Why fish history breaks across Docker mount boundaries (cross-device `rename()`) and the fix     |
 | [sharing-claude-config-lessons.md](docs/lessons/sharing-claude-config-lessons.md) | What went wrong bind-mounting the host `~/.claude` into the devcontainer, and what to do instead |

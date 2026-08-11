@@ -58,6 +58,31 @@ cd PROJECT_NAME:
 claude PROJECT_NAME *ARGS:
     docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions {{ ARGS }}"
 
+# Claude reports it itself if that project has no session yet.
+# Continue a project's most recent session (e.g. `just resume my-project`).
+[group('access')]
+resume PROJECT_NAME:
+    @just claude {{ PROJECT_NAME }} --continue
+
+# Resuming by id ignores the cwd, so this lands in /workspaces (`cd .` from the
+# container WORKDIR) and needs no project name.
+# Resume one exact session by id, as printed by `just sessions`.
+[group('access')]
+resume-session SESSION_ID:
+    @just claude . --resume {{ SESSION_ID }}
+
+# `claude agents` is Claude's own session index, so this needs no process scanning:
+# it reports pid, cwd, sessionId, name and status. Add --json for the raw form.
+# List the Claude sessions running in the container, with how to resume each.
+[group('access')]
+sessions:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker exec -u user {{ CONTAINER }} claude agents --json | jq -r '
+        if length == 0 then "No Claude sessions running in {{ CONTAINER }}."
+        else .[] | "\(.cwd | ltrimstr("/workspaces/")) (\(.name), \(.status)): just resume-session \(.sessionId)"
+        end'
+
 # Runs extensions/install.sh from the coding-agent-config repo that config.sh clones at build.
 # Skipped during the image build (the ~/.claude dir is a mounted volume); run once the container is up.
 # Install agent extensions (Claude plugins/skills/MCP servers) in the running devcontainer.
