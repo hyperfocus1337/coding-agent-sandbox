@@ -135,6 +135,15 @@ COPY --chown=$USERNAME:$USERNAME config/config.fish /home/$USERNAME/.config/fish
 COPY --chown=$USERNAME:$USERNAME config/.profile /home/$USERNAME/.profile
 COPY --chown=$USERNAME:$USERNAME config/nvim/init.lua /home/$USERNAME/.config/nvim/init.lua
 
+# Performance optimization for fish shell bootup: pre-render the direnv/mise/starship
+# shell hooks. All three are version-pinned in the
+# image, so their init output can't drift; baking it here turns four subprocess spawns
+# per interactive shell into one `source`. config.fish sources this file.
+# starship's plain `init fish` only prints a stub that re-execs starship, so ask for the
+# full init directly.
+RUN { direnv hook fish; mise activate fish; starship init fish --print-full-init; } \
+    > /home/$USERNAME/.config/fish/hooks.fish
+
 # SSH bootstrap: seed known_hosts only. Your personal ~/.ssh/config and keys are
 # injected at runtime via docker-compose.override.yml bind mounts (see the .example),
 # never baked into a layer.
