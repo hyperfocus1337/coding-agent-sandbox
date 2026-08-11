@@ -13,8 +13,12 @@ export KUBE_EDITOR=vim
 # Add local bin directory
 export PATH="/home/user/.local/bin:$PATH"
 
+# Both hooks are guarded: a login shell that cannot see the tool should stay quiet
+# rather than print "command not found" on every exec. PATH itself is restored by
+# /etc/profile.d/00-image-path.sh, since /etc/profile resets it before this file runs.
+
 # direnv hook for automatic .envrc loading
-eval "$(direnv hook bash)"
+command -v direnv >/dev/null && eval "$(direnv hook bash)"
 
 # Add at the end of the file
-eval "$(starship init bash)"
+command -v starship >/dev/null && eval "$(starship init bash)"

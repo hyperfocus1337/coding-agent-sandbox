@@ -108,6 +108,13 @@ ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 ENV NPM_CONFIG_PREFIX="/usr/local/share/npm-global"
 ENV PATH="/usr/local/share/npm-global/bin:$PATH"
 
+# /etc/profile hard-resets PATH for login shells before sourcing /etc/profile.d,
+# so `bash -l` (and anything Claude spawns from it, since hooks run via sh) would
+# lose the mise shims, npm-global and ~/.local/bin set above. Snapshot the image
+# PATH into a drop-in, which /etc/profile sources after its reset. Must stay after
+# the last ENV PATH line so it captures all of them.
+RUN printf 'export PATH="%s"\n' "$PATH" > /etc/profile.d/00-image-path.sh
+
 # mise's global config: the committed mise.toml is the single source of truth for
 # every tool/language version across all layers. Each layer runs `mise install
 # <subset>` and reads the pins from here. Bump a version by editing mise.toml. COPY'd
