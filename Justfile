@@ -50,10 +50,13 @@ cd PROJECT_NAME:
 # -e TERM_PROGRAM lets the containerized Claude emit its own terminal notification,
 # which cmux renders; the cmux Claude wrapper cannot reach into the container.
 # See docs/guides/cmux-notifications.md.
+# ARGS are forwarded to claude, so `just claude my-project --continue` resumes
+# that project's most recent session (transcripts live in the claude-config volume,
+# so they survive a stop) and `--resume <id>` picks a specific one.
 # Step into a project directory and run Claude there (e.g. `just claude my-project`).
 [group('access')]
-claude PROJECT_NAME:
-    docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions"
+claude PROJECT_NAME *ARGS:
+    docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions {{ ARGS }}"
 
 # Runs extensions/install.sh from the coding-agent-config repo that config.sh clones at build.
 # Skipped during the image build (the ~/.claude dir is a mounted volume); run once the container is up.
