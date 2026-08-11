@@ -162,8 +162,8 @@ fix-volume-permissions:
 install-extensions:
     docker exec -it -u user {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
 
-# PROJECT is the path under ~/Repositories (e.g. `agents/my-project`); the last
-# segment becomes the /workspaces target. CONSISTENCY defaults to delegated.
+# PROJECT is a path under ~/Repositories (`agents/my-project`) or any absolute
+# path; its last segment becomes the /workspaces target.
 # See docs/guides/mounting-projects.md.
 # Append a project bind mount to the compose override, then restart to mount it.
 [group('setup')]
@@ -171,11 +171,18 @@ add-project PROJECT CONSISTENCY="delegated":
     #!/usr/bin/env bash
     set -euo pipefail
     override=".devcontainer/docker-compose.override.yml"
-    # Accept a bare `agents/foo`, `~/Repositories/agents/foo`, or an absolute
-    # `/Users/x/Repositories/agents/foo`; keep only the part after Repositories/.
+    # A relative path is a repo under ~/Repositories; an absolute one is taken as
+    # given, so ~/.local/share/chezmoi mounts from where it lives.
     project="{{ PROJECT }}"
-    project="${project#*Repositories/}"
-    line="      - \${HOME}/Repositories/${project}:/workspaces/$(basename "$project"):{{ CONSISTENCY }}"
+    project="${project/#\~/$HOME}"
+    [[ "$project" == /* ]] || project="$HOME/Repositories/$project"
+    # Compose expands ${HOME} at up time, so anything inside the home dir goes in
+    # that form and the override stays portable to a machine with a different home.
+    src="$project"
+    if [[ "$project" == "$HOME"/* ]]; then
+        src="\${HOME}${project#"$HOME"}"
+    fi
+    line="      - ${src}:/workspaces/$(basename "$project"):{{ CONSISTENCY }}"
     if grep -qF "$line" "$override"; then
         echo "already mounted: $project"
         exit 0

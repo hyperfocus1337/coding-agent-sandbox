@@ -18,7 +18,7 @@ just add-project agents/my-project
 
 It appends the bind mount and then runs `just up` to restart the container with the new path mounted. The last path segment (`my-project`) becomes the `/workspaces` target.
 
-The `PROJECT` argument is the path under `~/Repositories`. All three forms normalize to the same entry, so you can tab-complete a full path and it still works:
+The `PROJECT` argument is a path under `~/Repositories`. All three forms normalize to the same entry, so you can tab-complete a full path and it still works:
 
 ```bash
 just add-project agents/my-project
@@ -26,7 +26,7 @@ just add-project ~/Repositories/agents/my-project
 just add-project /Users/you/Repositories/agents/my-project
 ```
 
-Everything up to and including the first `Repositories/` is stripped, so the mount is always rooted at `${HOME}/Repositories/` regardless of what you pass.
+A relative path is taken as a repo under `~/Repositories`; an absolute path is mounted from where it lives, so `just add-project ~/.local/share/chezmoi` works too. Paths inside your home directory are written back as `${HOME}/...`, which compose expands at `up` time, so the override stays portable.
 
 ## Consistency flag
 
