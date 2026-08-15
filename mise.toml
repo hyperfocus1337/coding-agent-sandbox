@@ -5,7 +5,7 @@
 # from here:
 #   Dockerfile.base       -> yq, starship
 #   Dockerfile.node       -> node, pnpm, yarn
-#   Dockerfile.tooling    -> glab, just, terraform, kubectl, k3s, git-delta (aqua:dandavison/delta), just-lsp
+#   Dockerfile.tooling    -> glab, just, terraform, kubectl, k3s, git-delta (aqua:dandavison/delta), just-lsp, gitleaks, betterleaks
 #   Dockerfile.python     -> python, uv (also installs Chromium via `uv run`, @playwright/cli via npm; not mise)
 #   Dockerfile.agent      -> (none; script/curl-based AI installers)
 #
@@ -32,3 +32,7 @@ kubectl = "1.36.0"
 k3s = "1.35.3+k3s1"
 "aqua:dandavison/delta" = "0.19.2"
 "ubi:terror/just-lsp" = "0.4.5"
+
+# Secret scanners (Dockerfile.tooling)
+gitleaks = "8.30.1"
+betterleaks = "1.7.4"

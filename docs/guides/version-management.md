@@ -1,6 +1,6 @@
 # Tool and language version management
 
-Languages (Node, Python) and the pinned release binaries (git-delta, glab, just, just-lsp, terraform, yq, starship) plus the package managers (pnpm, yarn, uv) are all installed and pinned through [mise](https://github.com/jdx/mise). This replaces the old hand-rolled system (`versions.lock` + `scripts/versions/{manifest,install,resolve}.sh`) and the Corepack dance.
+Languages (Node, Python) and the pinned release binaries (git-delta, glab, just, just-lsp, terraform, yq, starship, gitleaks, betterleaks) plus the package managers (pnpm, yarn, uv) are all installed and pinned through [mise](https://github.com/jdx/mise). This replaces the old hand-rolled system (`versions.lock` + `scripts/versions/{manifest,install,resolve}.sh`) and the Corepack dance.
 
 ## How it works
 
@@ -14,12 +14,12 @@ ENV PATH="/usr/local/share/mise/shims:$PATH"
 
 Every version lives in one file: [`mise.toml`](../../mise.toml) at the repo root. `Dockerfile.base` COPYs it in as mise's global config (`/usr/local/share/mise/config.toml`), then each layer materializes only its subset with `mise install <tools>`, reading the pins from that config:
 
-| Layer                | `mise install …`                                     |
-|----------------------|------------------------------------------------------|
-| `Dockerfile.base`    | `yq`, `starship`                                     |
-| `Dockerfile.node`    | `node`, `pnpm`, `yarn`                               |
-| `Dockerfile.tooling` | `glab`, `just`, `terraform`, `git-delta`, `just-lsp` |
-| `Dockerfile.python`  | `python`, `uv`                                       |
+| Layer                | `mise install …`                                                                |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `Dockerfile.base`    | `yq`, `starship`                                                                |
+| `Dockerfile.node`    | `node`, `pnpm`, `yarn`                                                          |
+| `Dockerfile.tooling` | `glab`, `just`, `terraform`, `git-delta`, `just-lsp`, `gitleaks`, `betterleaks` |
+| `Dockerfile.python`  | `python`, `uv`                                                                  |
 
 `mise install <tool>` installs the tool into `MISE_DATA_DIR` at the version pinned in `mise.toml` and writes a shim onto `PATH`. Because the shims dir is on `PATH`, the tools resolve in any shell without activation; `config.fish` additionally runs `mise activate fish` so a developer can `mise use` new tools at runtime.
 

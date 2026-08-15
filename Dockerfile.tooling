@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # Adds general (non-node) developer tooling on top of the node devcontainer image:
 # GitHub CLI, GitLab CLI, OpenTofu, cloud CLIs (Azure/AWS), git-delta, just, just-lsp,
-# chezmoi. Node packages live in Dockerfile.node; AI agent installers in Dockerfile.agent.
+# gitleaks, betterleaks, chezmoi. Node packages live in Dockerfile.node; AI agent
+# installers in Dockerfile.agent.
 ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node:latest
 FROM ${BASE_IMAGE}
 
@@ -125,7 +126,7 @@ USER $USERNAME
 # base image. Short names resolve through mise's registry; git-delta uses its explicit
 # aqua backend and just-lsp (not in the registry) uses the ubi GitHub-release backend,
 # which downloads + extracts the release binary.
-RUN mise install glab just terraform kubectl k3s aqua:dandavison/delta ubi:terror/just-lsp
+RUN mise install glab just terraform kubectl k3s aqua:dandavison/delta ubi:terror/just-lsp gitleaks betterleaks
 
 # GitHub Stacked PRs (gh stack) extension: break large changes into small, stacked PRs.
 # Installs into the user-owned gh extension dir (~/.local/share/gh). Requires the gh CLI above.

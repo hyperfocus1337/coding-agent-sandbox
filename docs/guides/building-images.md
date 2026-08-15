@@ -26,7 +26,7 @@ Use **`just build-base`**, **`just build-node`**, **`just build-tooling`**, **`j
 
 ## Tool and language versions
 
-Languages (Node, Python), package managers (pnpm, yarn, uv), and the pinned release binaries (git-delta, glab, just, just-lsp, terraform, yq, starship) are all installed and version-pinned via [mise](https://github.com/jdx/mise). Every version lives in one file, [`mise.toml`](../../mise.toml) at the repo root, which is COPY'd into the base image as mise's global config; each layer installs its subset with `mise install`. To bump a version, edit `mise.toml` and rebuild. See [version-management.md](version-management.md) for the per-layer breakdown, backends, and adding tools.
+Languages (Node, Python), package managers (pnpm, yarn, uv), and the pinned release binaries (git-delta, glab, just, just-lsp, terraform, yq, starship, gitleaks, betterleaks) are all installed and version-pinned via [mise](https://github.com/jdx/mise). Every version lives in one file, [`mise.toml`](../../mise.toml) at the repo root, which is COPY'd into the base image as mise's global config; each layer installs its subset with `mise install`. To bump a version, edit `mise.toml` and rebuild. See [version-management.md](version-management.md) for the per-layer breakdown, backends, and adding tools.
 
 ## GitHub Actions builds
 
@@ -43,7 +43,7 @@ The images ship with **no** personal state, so they are safe to publish. Git ide
 The following variables can be overridden at invocation time (see the `Justfile` for the full list):
 
 | Variable        | Default                                                            | Description                                                                                            |
-|-----------------|--------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| --------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | `TZ`            | `Europe/Amsterdam` (or `$TZ` from the environment)                 | Timezone baked into the image                                                                          |
 | `IMAGE_BASE`    | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-base`    | Registry/repository path for the base image (`Dockerfile.base`)                                        |
 | `IMAGE_NODE`    | `ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node`    | Registry/repository path for the Node child image (`Dockerfile.node`)                                  |
