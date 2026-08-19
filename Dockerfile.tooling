@@ -79,6 +79,11 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
 # config.mak.autogen greps are not decoration: a missing header makes ./configure exit 0 and
 # silently set NO_CURL/NO_EXPAT/NO_OPENSSL (or drop USE_LIBPCRE2), which yields a git with no
 # https transport. Fail the build there instead of shipping that.
+#
+# NO_RUST=1 (both make calls, or install rebuilds the Rust lib) keeps cargo out of the build.
+# In 2.55 the Rust code is only varint plus hash/loose/csum_file wrappers, and NO_RUST
+# compiles the C varint.o instead, so nothing is lost. Git 3.0 makes Rust mandatory: add
+# `cargo` to the deps above and drop both NO_RUST=1 when moving to it.
 ARG GIT_VERSION=2.55.0
 ARG GIT_SHA256=457fdb04dc8728e007d4688695e6912e6f680727920f2a40bf11eacc17505357
 ARG GIT_MANPAGES_SHA256=a32d432f80df46a14a05d1104c72d5a13fe27e9feba9aa0f017e54131db6b982
@@ -105,8 +110,8 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     ./configure --prefix=/usr/local --without-tcltk --with-libpcre2; \
     grep -q '^USE_LIBPCRE2=' config.mak.autogen; \
     ! grep -qE '^(NO_CURL|NO_EXPAT|NO_OPENSSL)=' config.mak.autogen; \
-    make -j"$(nproc)"; \
-    make install; \
+    make -j"$(nproc)" NO_RUST=1; \
+    make install NO_RUST=1; \
     mkdir -p /usr/local/share/man; \
     tar -xf "/tmp/git-manpages-${GIT_VERSION}.tar.xz" -C /usr/local/share/man; \
     cd /; \
