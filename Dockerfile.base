@@ -34,7 +34,7 @@ RUN sed -i '\|path-exclude /usr/share/man/\*|d' /etc/dpkg/dpkg.cfg.d/docker
 # live in Dockerfile.tooling so this layer stays a lean baseline.
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     less \
     git \
     procps \
@@ -49,7 +49,17 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     neovim \
     direnv \
     tzdata \
+    locales \
     openssh-client
+
+# Generate the one locale the image ships. debian:*-slim carries only C/C.utf8/POSIX,
+# so any tool asking for en_US.UTF-8 (editors and terminals inject LC_CTYPE) fails to
+# set it and perl prints "Setting locale failed" on every run. locale-gen compiles it
+# into /usr/lib/locale. Add more by uncommenting them in /etc/locale.gen here.
+# Note: /etc/dpkg/dpkg.cfg.d/docker still path-excludes /usr/share/locale, so program
+# message catalogs stay out; English messages need none. Drop that line too if you
+# want translated tool output.
+RUN sed -i '/^# *en_US.UTF-8 UTF-8$/s/^# *//' /etc/locale.gen && locale-gen
 
 # mise: polyglot runtime + tool manager. Installs node/python and the pinned
 # release binaries (yq, starship, git-delta, just, terraform, …) in later steps
@@ -102,6 +112,12 @@ COPY --chmod=0755 scripts/container/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Drop to non-root user for runtime
 USER $USERNAME
+
+# Default locale, matching the one generated above. Sole locale definition in this
+# repo; nothing in compose, config.fish or .profile sets LANG/LC_*. Deliberately LANG
+# and not LC_ALL, so a container can override it from compose the way TZ does, and so
+# an inherited LC_CTYPE still wins for the terminal that sent it.
+ENV LANG="en_US.UTF-8"
 
 # Set the default editor and visual
 ENV EDITOR="nvim"
