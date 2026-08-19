@@ -119,9 +119,11 @@ USER $USERNAME
 # an inherited LC_CTYPE still wins for the terminal that sent it.
 ENV LANG="en_US.UTF-8"
 
-# Set the default editor and visual
+# Default editor, for every shell and every process. KUBE_EDITOR is here rather than
+# in a shell rc because kubectl needs it whatever spawned it.
 ENV EDITOR="nvim"
 ENV VISUAL="nvim"
+ENV KUBE_EDITOR="nvim"
 
 # Add ~/.local/bin (downstream tooling layers install here) and the npm-global bin to PATH.
 # NPM_CONFIG_PREFIX points to a system path so global npm installs land in

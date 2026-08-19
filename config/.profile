@@ -6,10 +6,6 @@ if [ "$BASH" ]; then
   fi
 fi
 
-# Change default editor to vim
-export VISUAL=vim
-export KUBE_EDITOR=vim
-
 # Add local bin directory
 export PATH="/home/user/.local/bin:$PATH"
 

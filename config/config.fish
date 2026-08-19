@@ -1,6 +1,4 @@
-# Change default editor to vim
-# EDITOR/VISUAL come from the image env; KUBE_EDITOR is fish-only.
-set -x KUBE_EDITOR nvim
+# EDITOR/VISUAL/KUBE_EDITOR come from the image env (Dockerfile.base).
 alias vim nvim
 
 # Disable MCP servers originating from claude.ai
