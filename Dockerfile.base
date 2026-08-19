@@ -21,6 +21,12 @@ ARG TARGETARCH
 RUN groupadd --gid "$USER_GID" "$USERNAME" \
     && useradd --uid "$USER_UID" --gid "$USER_GID" --create-home --shell /bin/bash "$USERNAME"
 
+# debian:*-slim ships /etc/dpkg/dpkg.cfg.d/docker, which path-excludes /usr/share/man
+# from every apt install. Drop that line so man pages land in the layers below (git's
+# pages come from git-man, already a hard dependency of git). Packages baked into the
+# base image itself stay stripped; --reinstall them here if you ever need `man ls`.
+RUN sed -i '\|path-exclude /usr/share/man/\*|d' /etc/dpkg/dpkg.cfg.d/docker
+
 # Minimal shell + OS baseline. Only what the base's own steps and shell need: the
 # fish login shell, git/curl/ca-certificates/gnupg for repos and apt keyrings,
 # openssh-client for the ssh-keyscan below, neovim/direnv/fzf for the shell, plus
