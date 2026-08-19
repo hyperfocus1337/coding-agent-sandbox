@@ -101,4 +101,5 @@ Investigations into tools or base images that were considered and measured, with
 
 | Doc                                                                  | Covers                                                                                          |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [base-image-git-version.md](docs/research/base-image-git-version.md) | Which base image ships a git 2.48+, and why `debian:trixie-slim` plus a source build still wins |
 | [brew-research.md](docs/research/brew-research.md)                   | Whether Homebrew on Linux could replace the apt/mise package installs, and why it was rejected  |

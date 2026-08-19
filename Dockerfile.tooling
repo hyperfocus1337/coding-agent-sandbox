@@ -66,6 +66,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
 # libcurl3t64-gnutls and would drop the libproxy/glib-networking/gstreamer chain with it.
 # Why not mise: git publishes no release binaries (git.git has zero GitHub release assets and
 # no aqua entry), so every mise backend would need a third-party plugin that compiles anyway.
+# Base images with a newer apt git were measured and rejected: docs/research/base-image-git-version.md.
 #
 # Everything git lives in this one block on purpose: build deps, tarball, build, man pages,
 # purge. To bump: change GIT_VERSION and both hashes together, taking them from
