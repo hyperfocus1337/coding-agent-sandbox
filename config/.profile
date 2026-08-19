@@ -6,9 +6,6 @@ if [ "$BASH" ]; then
   fi
 fi
 
-# Add local bin directory
-export PATH="/home/user/.local/bin:$PATH"
-
 # Both hooks are guarded: a login shell that cannot see the tool should stay quiet
 # rather than print "command not found" on every exec. PATH itself is restored by
 # /etc/profile.d/00-image-path.sh, since /etc/profile resets it before this file runs.
