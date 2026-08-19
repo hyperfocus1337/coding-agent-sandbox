@@ -1,13 +1,6 @@
 # Investigation: could Homebrew on Linux replace package installs?
 
-> **Update:** the languages and the standalone release binaries have since moved
-> to [mise](https://github.com/jdx/mise) (see [version-management.md](../guides/version-management.md)).
-> That does not contradict this note's verdict against Homebrew: mise is a
-> purpose-built polyglot version manager (not a second OS package manager), it
-> pins exact versions so builds stay reproducible, and it leaves base OS
-> utilities on apt, the agent CLIs on npm, and ruff/oci-cli on uv, exactly as
-> argued below. So the "keep on version scripts" recommendations in the tables
-> now read as "keep pinned via mise".
+> **Update:** the languages and the standalone release binaries have since moved to [mise](https://github.com/jdx/mise) (see [version-management.md](../guides/version-management.md)). That does not contradict this note's verdict against Homebrew: mise is a purpose-built polyglot version manager (not a second OS package manager), it pins exact versions so builds stay reproducible, and it leaves base OS utilities on apt, the agent CLIs on npm, and ruff/oci-cli on uv, exactly as argued below. So the "keep on version scripts" recommendations in the tables now read as "keep pinned via mise".
 
 This note records whether the packages installed across the Dockerfiles ([Dockerfile.base](../../Dockerfile.base), [Dockerfile.node](../../Dockerfile.node), [Dockerfile.tooling](../../Dockerfile.tooling), [Dockerfile.python](../../Dockerfile.python), [Dockerfile.agent](../../Dockerfile.agent)) could be installed through Homebrew for Linux instead of their current managers (apt, single-binary downloads, vendor install scripts, npm, and uv).
 
@@ -42,7 +35,7 @@ The tables record whether a formula exists and whether it ships Linux bottles fo
 Every tool below that exists on brew ships both `x86_64_linux` and `arm64_linux` bottles (or an arch-independent bottle), verified live against the formulae.brew.sh JSON API.
 
 | Tool                                                                                                                  | brew formula                         | On brew (core)? | Recommended manager                                        |
-|-----------------------------------------------------------------------------------------------------------------------|--------------------------------------|-----------------|------------------------------------------------------------|
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | --------------- | ---------------------------------------------------------- |
 | git, less, curl, wget, gnupg, unzip, tree, fzf, fish, neovim, direnv, jq                                              | same names                           | yes             | keep on apt (base OS / lighter)                            |
 | ripgrep, fd-find, bat, shellcheck, universal-ctags, patchutils, miller, csvkit, httpie, socat, moreutils, ncdu, rsync | `fd` for fd-find; rest same          | yes             | keep on apt                                                |
 | dnsutils                                                                                                              | `bind`                               | yes             | keep on apt                                                |
@@ -57,7 +50,7 @@ Every tool below that exists on brew ships both `x86_64_linux` and `arm64_linux`
 ### Tooling image
 
 | Tool                                                               | current method | brew                                                                        | Linux bottles | Recommended manager                                            |
-|--------------------------------------------------------------------|----------------|-----------------------------------------------------------------------------|---------------|----------------------------------------------------------------|
+| ------------------------------------------------------------------ | -------------- | --------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
 | gh                                                                 | apt keyring    | core `gh`                                                                   | yes           | keep (apt path is vendor-documented)                           |
 | glab                                                               | binary script  | core `glab`                                                                 | yes           | keep on version scripts (pinned)                               |
 | git-delta                                                          | binary script  | core `git-delta`                                                            | yes           | keep on version scripts (pinned)                               |
@@ -78,7 +71,7 @@ Every tool below that exists on brew ships both `x86_64_linux` and `arm64_linux`
 ### Python image
 
 | Tool                  | current method           | brew                                     | Linux bottles | Recommended manager                                          |
-|-----------------------|--------------------------|------------------------------------------|---------------|--------------------------------------------------------------|
+| --------------------- | ------------------------ | ---------------------------------------- | ------------- | ------------------------------------------------------------ |
 | python3 (+ pip, venv) | apt                      | core `python@3.x` (bundles pip and venv) | yes           | keep on apt                                                  |
 | uv, uvx               | copied from astral image | core `uv`                                | yes           | keep (pinned copy from official image)                       |
 | ruff                  | uv tool                  | core `ruff`                              | yes           | keep on uv (good brew candidate too, but uv keeps it pinned) |
@@ -87,7 +80,7 @@ Every tool below that exists on brew ships both `x86_64_linux` and `arm64_linux`
 ### Playwright image
 
 | Tool                               | current method          | brew                                                                                      | Notes                                                                  |
-|------------------------------------|-------------------------|-------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| ---------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | playwright (Python pkg + Chromium) | uv run                  | no formula                                                                                | keep on uv; browser binaries come from `playwright install` regardless |
 | @playwright/cli                    | npm                     | `playwright-cli` exists but is the abandoned `@playwright/cli@0.1.14`, not the modern CLI | keep on npm; the brew formula is a stale trap                          |
 | cloakbrowser                       | uv tool (commented out) | no formula                                                                                | keep on uv                                                             |

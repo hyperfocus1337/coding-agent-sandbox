@@ -92,6 +92,13 @@ Investigation notes and writeups from building the sandbox: approaches that were
 
 | Doc                                                                               | Covers                                                                                           |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [brew-research.md](docs/lessons/brew-research.md)                                 | Whether Homebrew on Linux could replace the apt/mise package installs, and why it was rejected   |
 | [fish-history-docker-mounts.md](docs/lessons/fish-history-docker-mounts.md)       | Why fish history breaks across Docker mount boundaries (cross-device `rename()`) and the fix     |
 | [sharing-claude-config-lessons.md](docs/lessons/sharing-claude-config-lessons.md) | What went wrong bind-mounting the host `~/.claude` into the devcontainer, and what to do instead |
+
+## Research (options weighed before deciding)
+
+Investigations into tools or base images that were considered and measured, with the numbers behind the decision. Kept so the same question is not researched twice.
+
+| Doc                                                                  | Covers                                                                                          |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [brew-research.md](docs/research/brew-research.md)                   | Whether Homebrew on Linux could replace the apt/mise package installs, and why it was rejected  |
