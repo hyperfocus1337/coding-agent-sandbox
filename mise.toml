@@ -11,6 +11,10 @@
 #
 # `mise registry` lists the short names; tools not in the registry use an
 # explicit backend (aqua:/ubi:/github:/gitlab:).
+#
+# git is NOT here: it ships no release binaries for any mise backend to fetch, so
+# Dockerfile.tooling builds it from the official source tarball (version + hashes pinned
+# in the ARGs of that block) and Dockerfile.base has its apt git commented out.
 
 [tools]
 # Languages + package managers (Dockerfile.node / Dockerfile.python)

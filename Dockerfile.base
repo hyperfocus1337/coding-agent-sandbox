@@ -22,21 +22,25 @@ RUN groupadd --gid "$USER_GID" "$USERNAME" \
     && useradd --uid "$USER_UID" --gid "$USER_GID" --create-home --shell /bin/bash "$USERNAME"
 
 # debian:*-slim ships /etc/dpkg/dpkg.cfg.d/docker, which path-excludes /usr/share/man
-# from every apt install. Drop that line so man pages land in the layers below (git's
-# pages come from git-man, already a hard dependency of git). Packages baked into the
-# base image itself stay stripped; --reinstall them here if you ever need `man ls`.
+# from every apt install. Drop that line so man pages land in the layers below (git's pages
+# no longer come from apt: Dockerfile.tooling unpacks the upstream git-manpages tarball next
+# to its source build). Packages baked into the base image itself stay stripped; --reinstall
+# them here if you ever need `man ls`.
 RUN sed -i '\|path-exclude /usr/share/man/\*|d' /etc/dpkg/dpkg.cfg.d/docker
 
 # Minimal shell + OS baseline. Only what the base's own steps and shell need: the
-# fish login shell, git/curl/ca-certificates/gnupg for repos and apt keyrings,
+# fish login shell, curl/ca-certificates/gnupg for repos and apt keyrings,
 # openssh-client for the ssh-keyscan below, neovim/direnv/fzf for the shell, plus
 # sudo/less/procps/unzip. The AI-agent CLI toolkit and other developer utilities
 # live in Dockerfile.tooling so this layer stays a lean baseline.
+# git is NOT installed here: apt caps at trixie's 2.47.3, so Dockerfile.tooling builds it
+# from the official upstream tarball instead. Nothing in this layer or Dockerfile.node calls
+# git, so the tooling image is the first one that has a git.
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     less \
-    git \
+#   git  -> built from source in Dockerfile.tooling, see the git block there
     procps \
     sudo \
     fzf \

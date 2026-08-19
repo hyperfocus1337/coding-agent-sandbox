@@ -7,9 +7,8 @@ OS packages split across two layers: `Dockerfile.base` keeps a lean shell/OS bas
 Only what the base's own build steps and the shell need:
 
 | Package            | Provides    | Purpose                                           |
-|--------------------|-------------|---------------------------------------------------|
+| ------------------ | ----------- | ------------------------------------------------- |
 | `less`             |             | pager                                             |
-| `git`              |             | version control                                   |
 | `procps`           | `ps`, `top` | process inspection                                |
 | `sudo`             |             | privilege escalation (see sudo password section)  |
 | `fzf`              |             | fuzzy finder                                      |
@@ -24,12 +23,16 @@ Only what the base's own build steps and the shell need:
 
 `yq` and `starship` are also installed in the base image, via mise (not apt).
 
+`git` is deliberately **not** an apt package: Debian trixie caps at 2.47.3. `Dockerfile.tooling` builds it from the official upstream tarball instead, in one self-contained block (build deps, sha256-pinned download, build, man pages, dep purge). The base and node images therefore have no `git`.
+
+That block installs `gettext`, `libcurl4-openssl-dev`, `libexpat1-dev`, `zlib1g-dev`, `libssl-dev` and `libpcre2-dev`, then purges them again in the same layer, so they do not reach the final image. `apt-mark manual` keeps the five runtime libraries git links against, which `--auto-remove` would otherwise take with the headers. Man pages come from the upstream `git-manpages` tarball, so `man git` works.
+
 ## Developer + AI-agent tooling (`Dockerfile.tooling`)
 
 Utilities coding agents shell out to plus general dev/network/data tools, moved off the baseline so the base layer stays minimal:
 
 | Package             | Provides                        | Purpose                                           |
-|---------------------|---------------------------------|---------------------------------------------------|
+| ------------------- | ------------------------------- | ------------------------------------------------- |
 | `ripgrep`           | `rg`                            | fast recursive grep; Claude Code's search backend |
 | `fd-find`           | `fd` (symlinked from `fdfind`)  | fast file finder                                  |
 | `bat`               | `bat` (symlinked from `batcat`) | `cat` with syntax highlight + line numbers        |

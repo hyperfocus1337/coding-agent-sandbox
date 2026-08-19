@@ -26,7 +26,7 @@ Use **`just build-base`**, **`just build-node`**, **`just build-tooling`**, **`j
 
 ## Tool and language versions
 
-Languages (Node, Python), package managers (pnpm, yarn, uv), and the pinned release binaries (git-delta, glab, just, just-lsp, terraform, yq, starship, gitleaks, betterleaks) are all installed and version-pinned via [mise](https://github.com/jdx/mise). Every version lives in one file, [`mise.toml`](../../mise.toml) at the repo root, which is COPY'd into the base image as mise's global config; each layer installs its subset with `mise install`. To bump a version, edit `mise.toml` and rebuild. See [version-management.md](version-management.md) for the per-layer breakdown, backends, and adding tools.
+Languages (Node, Python), package managers (pnpm, yarn, uv), and the pinned release binaries (git-delta, glab, just, just-lsp, terraform, yq, starship, gitleaks, betterleaks) are all installed and version-pinned via [mise](https://github.com/jdx/mise). Every version lives in one file, [`mise.toml`](../../mise.toml) at the repo root, which is COPY'd into the base image as mise's global config; each layer installs its subset with `mise install`. To bump a version, edit `mise.toml` and rebuild. See [version-management.md](version-management.md) for the per-layer breakdown, backends, and adding tools. git is the one exception: it has no binary release for mise to fetch, so `Dockerfile.tooling` compiles it from the official tarball with the version and hashes pinned in that block's `ARG`s.
 
 ## GitHub Actions builds
 

@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # Adds general (non-node) developer tooling on top of the node devcontainer image:
 # GitHub CLI, GitLab CLI, OpenTofu, cloud CLIs (Azure/AWS), git-delta, just, just-lsp,
-# gitleaks, betterleaks, chezmoi. Node packages live in Dockerfile.node; AI agent
-# installers in Dockerfile.agent.
+# gitleaks, betterleaks, chezmoi, git (built from the official source tarball, newer than
+# trixie apt). Node packages live in Dockerfile.node; AI agent installers in Dockerfile.agent.
 ARG BASE_IMAGE=ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-node:latest
 FROM ${BASE_IMAGE}
 
@@ -57,6 +57,71 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=lo
     sqlite3 && \
     ln -s "$(command -v fdfind)" /usr/local/bin/fd && \
     ln -s "$(command -v batcat)" /usr/local/bin/bat
+
+# ===== git, built from the official upstream release tarball =====
+#
+# Why not apt: trixie caps at git 2.47.3, but worktree.useRelativePaths needs 2.48+ (without
+# it a worktree created on the macOS host is unusable under /workspaces, since its .git file
+# points at /Users/...). sid has 2.55.0 but depends on libcurl4-gnutls, which Breaks trixie's
+# libcurl3t64-gnutls and would drop the libproxy/glib-networking/gstreamer chain with it.
+# Why not mise: git publishes no release binaries (git.git has zero GitHub release assets and
+# no aqua entry), so every mise backend would need a third-party plugin that compiles anyway.
+#
+# Everything git lives in this one block on purpose: build deps, tarball, build, man pages,
+# purge. To bump: change GIT_VERSION and both hashes together, taking them from
+# https://mirrors.edge.kernel.org/pub/software/scm/git/sha256sums.asc (signed by the git
+# maintainer). --without-tcltk skips gitk/git-gui, so no tcl/tk; build-essential comes from
+# the base image. The -dev packages are purged in the same layer, after apt-mark pins the
+# runtime libs git links against (all five arrive as auto-installed deps, so --auto-remove
+# would otherwise take them and break the binary).
+#
+# pcre2 is opt-in (`--with-libpcre2`), otherwise `git grep -P` is missing. The
+# config.mak.autogen greps are not decoration: a missing header makes ./configure exit 0 and
+# silently set NO_CURL/NO_EXPAT/NO_OPENSSL (or drop USE_LIBPCRE2), which yields a git with no
+# https transport. Fail the build there instead of shipping that.
+ARG GIT_VERSION=2.55.0
+ARG GIT_SHA256=457fdb04dc8728e007d4688695e6912e6f680727920f2a40bf11eacc17505357
+ARG GIT_MANPAGES_SHA256=a32d432f80df46a14a05d1104c72d5a13fe27e9feba9aa0f017e54131db6b982
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-$TARGETARCH,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,id=apt-lists-$TARGETARCH,sharing=locked \
+    set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        gettext \
+        libcurl4-openssl-dev \
+        libexpat1-dev \
+        zlib1g-dev \
+        libssl-dev \
+        libpcre2-dev; \
+    apt-mark manual libcurl4t64 libexpat1 zlib1g libssl3t64 libpcre2-8-0; \
+    mirror="https://mirrors.edge.kernel.org/pub/software/scm/git"; \
+    cd /tmp; \
+    curl -fsSLO "$mirror/git-${GIT_VERSION}.tar.xz"; \
+    curl -fsSLO "$mirror/git-manpages-${GIT_VERSION}.tar.xz"; \
+    echo "${GIT_SHA256}  git-${GIT_VERSION}.tar.xz" | sha256sum -c -; \
+    echo "${GIT_MANPAGES_SHA256}  git-manpages-${GIT_VERSION}.tar.xz" | sha256sum -c -; \
+    tar -xf "git-${GIT_VERSION}.tar.xz"; \
+    cd "git-${GIT_VERSION}"; \
+    ./configure --prefix=/usr/local --without-tcltk --with-libpcre2; \
+    grep -q '^USE_LIBPCRE2=' config.mak.autogen; \
+    ! grep -qE '^(NO_CURL|NO_EXPAT|NO_OPENSSL)=' config.mak.autogen; \
+    make -j"$(nproc)"; \
+    make install; \
+    mkdir -p /usr/local/share/man; \
+    tar -xf "/tmp/git-manpages-${GIT_VERSION}.tar.xz" -C /usr/local/share/man; \
+    cd /; \
+    rm -rf "/tmp/git-${GIT_VERSION}" /tmp/git-*.tar.xz; \
+    apt-get purge -y --auto-remove \
+        gettext \
+        libcurl4-openssl-dev \
+        libexpat1-dev \
+        zlib1g-dev \
+        libssl-dev \
+        libpcre2-dev; \
+    test "$(command -v git)" = /usr/local/bin/git; \
+    test "$(git --version)" = "git version ${GIT_VERSION}"; \
+    test -x /usr/local/libexec/git-core/git-remote-https; \
+    test -f /usr/local/share/man/man1/git-init.1
 
 # Github CLI (apt from custom keyring).
 # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian

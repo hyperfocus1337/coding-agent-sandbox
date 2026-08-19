@@ -42,4 +42,6 @@ Most tools resolve by short name through mise's built-in [registry](https://mise
 
 ## What is deliberately not on mise
 
+**git** is the notable one. Trixie's apt git is 2.47.3 and `worktree.useRelativePaths` needs 2.48+, but no mise backend can install a newer one: git publishes no release binaries (`git/git` has zero GitHub release assets, and aqua has no entry), so `aqua:`/`ubi:`/`github:` have nothing to download, and git is not a mise core tool. The only mise route is a plugin that compiles from source, which means running third-party bash or vendoring a plugin of our own. Neither is worth it for one tool, so `Dockerfile.tooling` builds git from the official kernel.org tarball in a single block, with `GIT_VERSION` and two sha256 hashes pinned as `ARG`s there. Debian sid's 2.55.0 package was rejected: it depends on `libcurl4-gnutls`, which `Breaks` trixie's `libcurl3t64-gnutls` and would remove `libproxy1v5`, `glib-networking` and the gstreamer plugins with it.
+
 Base OS utilities stay on apt, the agent CLIs stay on npm, and ruff/oci-cli stay on uv. See [brew-research.md](../lessons/brew-research.md) for the per-ecosystem reasoning; mise owns the languages and the version-pinned-binary niche, which is where it fits best.
