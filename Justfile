@@ -3,7 +3,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Running devcontainer container name. Used by Container lifecycle, Shell access,
-# Claude sessions and Setup.
+# Agent sessions and Setup.
 CONTAINER := "coding-agent-sandbox-devcontainer"
 
 # Both compose files, in override-last order. Used by Container lifecycle and Watchtower.
@@ -94,7 +94,7 @@ devcontainer-enter:
     devcontainer exec fish
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Claude sessions
+# Agent sessions
 # ──────────────────────────────────────────────────────────────────────────────
 
 # -e TERM_PROGRAM lets the containerized Claude emit its own terminal notification,
