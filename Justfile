@@ -132,6 +132,26 @@ resume PROJECT_NAME:
 resume-session SESSION_ID:
     @just claude . --resume {{ SESSION_ID }}
 
+# --- Codex ---
+
+# Same shape as `claude` above: the bypass flag is Codex's equivalent of
+# --dangerously-skip-permissions, and the container is the sandbox it asks for.
+# Codex keeps its state in ~/.codex, a named volume, so its sessions survive a stop.
+# Step into a project directory and run Codex there (e.g. `just codex my-project`).
+[group('sessions')]
+codex PROJECT_NAME *ARGS:
+    docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; codex --dangerously-bypass-approvals-and-sandbox {{ ARGS }}"
+
+# `codex resume` filters its picker by cwd, so --last from the project dir is that
+# project's most recent session. Codex reports it itself when there is none.
+# Codex has no counterpart to `claude agents`, so there is no `codex-sessions`
+# recipe and no way to resume one exact Codex session by id from here. Run
+# `just codex <project> resume` for Codex's own picker instead.
+# Continue a project's most recent Codex session (e.g. `just codex-resume my-project`).
+[group('sessions')]
+codex-resume PROJECT_NAME:
+    @just codex {{ PROJECT_NAME }} resume --last
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Setup (fresh machine, new project, after a rebuild)
 # ──────────────────────────────────────────────────────────────────────────────
