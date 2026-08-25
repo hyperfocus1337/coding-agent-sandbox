@@ -35,7 +35,7 @@ terraform = "1.15.9"
 kubectl = "1.36.4"
 k3s = "1.36.3+k3s1"
 "aqua:dandavison/delta" = "0.19.2"
-"ubi:terror/just-lsp" = "0.6.2"
+"github:terror/just-lsp" = "0.6.2"
 
 # Secret scanners (Dockerfile.tooling)
 gitleaks = "8.30.1"
