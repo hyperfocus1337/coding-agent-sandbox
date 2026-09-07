@@ -3,7 +3,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Running devcontainer container name. Used by Container lifecycle, Shell access,
-# Agent sessions and Setup.
+# Agent sessions, Setup and Projects.
 CONTAINER := "coding-agent-sandbox-devcontainer"
 
 # Both compose files, in override-last order. Used by Container lifecycle and Watchtower.
@@ -173,7 +173,7 @@ codex-resume PROJECT_NAME:
     @just codex {{ PROJECT_NAME }} resume --last
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Setup (fresh machine, new project, after a rebuild)
+# Setup (fresh machine, after a rebuild)
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Run once on a fresh machine before `just up`; the compose file declares them
@@ -202,11 +202,19 @@ fix-volume-permissions:
 install-extensions:
     docker exec -it -u user {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Projects (the bind mounts under /workspaces)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# A project is one bind mount: a directory on the host, mounted as one directory under
+# /workspaces in the container. The first two recipes read the mounts, the last three
+# change them. See docs/guides/mounting-projects.md.
+
 # The mounted projects are the dirs under /workspaces in the container, which is what
 # the agents see. A mount added since the container was created is in the override and
 # not there yet.
 # List the mounted projects.
-[group('setup')]
+[group('projects')]
 projects:
     @bash scripts/projects/list.sh {{ CONTAINER }}
 
@@ -220,15 +228,15 @@ projects:
 # no-exit-message: "not mounted" is an answer, not a failed recipe. Keep the description
 # below it, just takes the last comment line as its `--list` text.
 # Resolve a project name to its path under /workspaces, or refuse it.
-[group('setup')]
+[group('projects')]
 [no-exit-message]
 resolve-project PROJECT CLI="just":
     @bash scripts/projects/resolve.sh {{ CONTAINER }} "{{ PROJECT }}" {{ CLI }}
 
-# The three recipes below edit the project bind mounts in the compose override. The
-# logic lives in scripts/projects/, whose lib.sh owns the override path and the mount
-# line format. All three are prefixed with `@`: `cas` calls them and shows what they
-# print, so the echoed command line would be noise in its output.
+# The three recipes below edit the mounts. Their logic lives in scripts/projects/,
+# whose lib.sh owns the override path and the mount line format. All three are prefixed
+# with `@`: `cas` calls them and shows what they print, so the echoed command line would
+# be noise in its output.
 
 # PROJECT is a path under ~/Repositories (`agents/my-project`) or any absolute
 # path; its last segment becomes the /workspaces target. Exits 3 when that mount
@@ -236,7 +244,7 @@ resolve-project PROJECT CLI="just":
 # no-exit-message: that exit 3 is a normal outcome, not a failed recipe. Keep the
 # description below it, just takes the last comment line as its `--list` text.
 # Append a project bind mount to the compose override (apply it with `just up`).
-[group('setup')]
+[group('projects')]
 [no-exit-message]
 add-project PROJECT CONSISTENCY="delegated":
     @bash scripts/projects/add-project.sh "{{ PROJECT }}" "{{ CONSISTENCY }}"
@@ -247,7 +255,7 @@ add-project PROJECT CONSISTENCY="delegated":
 # no-exit-message: "not mounted" is an answer, not a failed recipe. Keep the
 # description below it, just takes the last comment line as its `--list` text.
 # Print the host directory a mounted project comes from.
-[group('setup')]
+[group('projects')]
 [no-exit-message]
 project-source PROJECT:
     @bash scripts/projects/project-source.sh "{{ PROJECT }}"
@@ -262,7 +270,7 @@ project-source PROJECT:
 # no-exit-message: those refusals are answers, not failed recipes. Keep the description
 # below it, just takes the last comment line as its `--list` text.
 # Rename a mounted project on the host and in /workspaces.
-[group('setup')]
+[group('projects')]
 [no-exit-message]
 rename-project OLD NEW:
     @bash scripts/projects/rename-project.sh "{{ OLD }}" "{{ NEW }}"
