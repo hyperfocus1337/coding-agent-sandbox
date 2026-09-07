@@ -41,9 +41,22 @@ default:
 [group('lifecycle')]
 up: up-compose
 
-# Restart using docker compose by default.
+# Mounts are baked into a container when it is created, so `restart-compose` below
+# never applies a mount that was added since. This converges compose first, which
+# recreates the container when its config changed, and bounces it only when compose
+# left it alone. A stopped container is started.
+# Restart the devcontainer so it comes back with the current compose config.
 [group('lifecycle')]
-restart: restart-compose
+restart:
+    @bash scripts/container/restart.sh {{ CONTAINER }}
+
+# `restart` above is enough when the compose config changed. This is the way to recycle
+# a container whose config did not, so compose would leave it alone.
+# Delete the container and start a fresh one, even when the compose config is unchanged.
+[group('lifecycle')]
+recreate:
+    @docker rm -f {{ CONTAINER }} 2>/dev/null || true
+    @just up
 
 # Stop the devcontainer.
 [group('lifecycle')]
@@ -63,7 +76,9 @@ rm:
 up-compose:
     docker compose {{ COMPOSE_FILES }} up -d
 
-# Restart the devcontainer with docker compose (what `restart` calls).
+# Reuses the existing container, so it cannot apply a new mount. Use `restart` above
+# unless that is what you want.
+# Restart the devcontainer with raw `docker compose restart` (no recreate).
 [group('lifecycle')]
 restart-compose:
     docker compose {{ COMPOSE_FILES }} restart
@@ -86,8 +101,9 @@ docker-enter:
 
 # Step into a project directory and open a shell there (e.g. `just cd my-project`).
 [group('access')]
+[no-exit-message]
 cd PROJECT_NAME:
-    docker exec -it -u user {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}"
+    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user {{ CONTAINER }} fish -C "cd $p"
 
 # Enter the devcontainer with a shell (using devcontainer CLI).
 [group('access')]
@@ -105,24 +121,24 @@ devcontainer-enter:
 # transcripts they resume from live in the claude-config volume, so they survive a stop.
 # Step into a project directory and run Claude there (e.g. `just claude my-project`).
 [group('sessions')]
+[no-exit-message]
 claude PROJECT_NAME *ARGS:
-    docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; claude --dangerously-skip-permissions {{ ARGS }}"
+    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd $p; claude --dangerously-skip-permissions {{ ARGS }}"
 
-# `claude agents` is Claude's own session index, so this needs no process scanning:
-# it reports pid, cwd, sessionId, name and status. Add --json for the raw form.
+# RESUME is prefixed to each session id, so cas passes its own resume command and the
+# lines it prints stay pasteable. The script prints nothing when no session is running,
+# which is how cas tells that from a probe it could not make, so the message for that
+# case is added here.
 # List the Claude sessions running in the container, with how to resume each.
 [group('sessions')]
-sessions:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    docker exec -u user {{ CONTAINER }} claude agents --json | jq -r '
-        if length == 0 then "No Claude sessions running in {{ CONTAINER }}."
-        else .[] | "\(.cwd | ltrimstr("/workspaces/")) (\(.name), \(.status)): just resume-session \(.sessionId)"
-        end'
+[no-exit-message]
+sessions RESUME="just resume-session":
+    @out="$(bash scripts/sessions/list.sh {{ CONTAINER }} "{{ RESUME }}")" && printf '%s\n' "${out:-No Claude sessions running in {{ CONTAINER }}.}"
 
 # Claude reports it itself if that project has no session yet.
 # Continue a project's most recent session (e.g. `just resume my-project`).
 [group('sessions')]
+[no-exit-message]
 resume PROJECT_NAME:
     @just claude {{ PROJECT_NAME }} --continue
 
@@ -130,6 +146,7 @@ resume PROJECT_NAME:
 # container WORKDIR) and needs no project name.
 # Resume one exact session by id, as printed by `just sessions`.
 [group('sessions')]
+[no-exit-message]
 resume-session SESSION_ID:
     @just claude . --resume {{ SESSION_ID }}
 
@@ -140,8 +157,9 @@ resume-session SESSION_ID:
 # Codex keeps its state in ~/.codex, a named volume, so its sessions survive a stop.
 # Step into a project directory and run Codex there (e.g. `just codex my-project`).
 [group('sessions')]
+[no-exit-message]
 codex PROJECT_NAME *ARGS:
-    docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd {{ PROJECT_NAME }}; codex --dangerously-bypass-approvals-and-sandbox {{ ARGS }}"
+    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd $p; codex --dangerously-bypass-approvals-and-sandbox {{ ARGS }}"
 
 # `codex resume` filters its picker by cwd, so --last from the project dir is that
 # project's most recent session. Codex reports it itself when there is none.
@@ -150,6 +168,7 @@ codex PROJECT_NAME *ARGS:
 # `just codex <project> resume` for Codex's own picker instead.
 # Continue a project's most recent Codex session (e.g. `just codex-resume my-project`).
 [group('sessions')]
+[no-exit-message]
 codex-resume PROJECT_NAME:
     @just codex {{ PROJECT_NAME }} resume --last
 
@@ -182,6 +201,29 @@ fix-volume-permissions:
 [group('setup')]
 install-extensions:
     docker exec -it -u user {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
+
+# The mounted projects are the dirs under /workspaces in the container, which is what
+# the agents see. A mount added since the container was created is in the override and
+# not there yet.
+# List the mounted projects.
+[group('setup')]
+projects:
+    @bash scripts/projects/list.sh {{ CONTAINER }}
+
+# Used by `claude`, `codex` and `cd` above, so an unmounted name is one message instead
+# of an agent running in /workspaces on the whole tree. `org/repo` and
+# ~/Repositories/org/repo both resolve to the mount `repo`, and anything after it is
+# kept, so `org/repo/src` resolves to `repo/src`.
+#
+# CLI names the front end the refusal points at, since cas has its own names for the
+# listing and the mount command. cas passes `cas`.
+# no-exit-message: "not mounted" is an answer, not a failed recipe. Keep the description
+# below it, just takes the last comment line as its `--list` text.
+# Resolve a project name to its path under /workspaces, or refuse it.
+[group('setup')]
+[no-exit-message]
+resolve-project PROJECT CLI="just":
+    @bash scripts/projects/resolve.sh {{ CONTAINER }} "{{ PROJECT }}" {{ CLI }}
 
 # The three recipes below edit the project bind mounts in the compose override. The
 # logic lives in scripts/projects/, whose lib.sh owns the override path and the mount

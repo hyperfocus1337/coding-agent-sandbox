@@ -43,7 +43,10 @@ Run `just` with no arguments to list every recipe. The common ones:
 | ------------------------------ | ---------------------------------------------------------------- |
 | `just up`                      | Start the devcontainer (compose stack)                           |
 | `just stop` / `just rm`        | Stop / remove the container                                      |
+| `just restart`                 | Bring the container back on the current compose config           |
+| `just recreate`                | Delete the container and start a fresh one                       |
 | `just docker-enter`            | Open a fish shell in the running container                       |
+| `just projects`                | List the mounted projects (the dirs under /workspaces)           |
 | `just cd my-project`           | Open a shell already `cd`'d into a project directory             |
 | `just claude my-project`       | Start Claude Code inside a project directory                     |
 | `just sessions`                | List the Claude sessions running in the container                |
@@ -71,7 +74,7 @@ The devcontainer is built from a layered stack of images (`base` → `node` → 
 | `config/config.fish`       | Fish shell configuration (mise activation, Starship prompt, direnv hook, PATH).                                                                                                                      |
 | `scripts/agents/config.sh` | Runs at build (`Dockerfile.agent`): clones the `coding-agent-config` repo and applies dotfiles via chezmoi. Extensions (plugins/skills/MCP) are installed at runtime with `just install-extensions`. |
 | `scripts/agents/gemini.sh` | Gemini CLI extensions (CLI is installed in `Dockerfile.node`; this script is commented out in `Dockerfile.agent`).                                                                                   |
-| `scripts/projects/`        | Bash behind the `add-project`, `project-source` and `rename-project` recipes: the scripts that read and write the project bind mounts in the compose override.                                       |
+| `scripts/projects/`        | Bash behind the project recipes: the mount editors (`add-project`, `rename-project`, `project-source`) plus the listing and the name resolution the agent recipes and cas share.                     |
 | `Justfile`                 | Convenience commands for building the images and common container tasks.                                                                                                                             |
 
 ## Documentation

@@ -68,4 +68,9 @@ Re-running `add-project` for a path that is already mounted with the same consis
 
 ## Where the logic lives
 
-The three recipes are one line each in the [`Justfile`](../../Justfile). They run the scripts in [`scripts/projects/`](../../scripts/projects), which are also runnable on their own. `lib.sh` there holds the override path and the mount line format, so a change to the line shape is one edit that all three scripts follow.
+The recipes are one line each in the [`Justfile`](../../Justfile). They run the scripts in [`scripts/projects/`](../../scripts/projects), which are also runnable on their own. `lib.sh` there holds the override path and the mount line format, so a change to the line shape is one edit that the three mount editors follow.
+
+Two more scripts in that folder answer questions about the mounts instead of changing them, and both `just` and `cas` call them:
+
+- `list.sh`, behind `just projects` and `cas list`, lists the directories under `/workspaces` in the container. That is what the agents see, so a mount added since the container was created is in the override and not in the listing.
+- `resolve.sh`, behind `just resolve-project`, turns a project name into its path under `/workspaces` and refuses a name that is not mounted. `just claude`, `just codex` and `just cd` resolve their argument through it, so an unmounted name is one message instead of an agent running in `/workspaces` on the whole tree. `cas` passes `cas` as the second argument, which is what makes the refusal name `cas list` instead of `just projects`.
