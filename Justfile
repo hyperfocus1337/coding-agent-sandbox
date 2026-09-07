@@ -94,21 +94,15 @@ up-dev:
 
 # -u user: the container runs `user: root` so entrypoint.sh can seed the sudo
 # password, but exec sessions must land as user (docker exec defaults to root).
-# Enter the devcontainer with a shell (using docker exec).
-[group('access')]
-docker-enter:
-    docker exec -it -u user {{ CONTAINER }} fish
-
-# Step into a project directory and open a shell there (e.g. `just cd my-project`).
+#
+# -w takes the directory, so this needs no `cd` inside the shell, and the argument can
+# be a project or any path under one. The default `.` resolves to itself, which is
+# /workspaces, the container WORKDIR: `just cd` with no argument lands there.
+# Open a fish shell in the container (e.g. `just cd my-project`, or bare for /workspaces).
 [group('access')]
 [no-exit-message]
-cd PROJECT_NAME:
-    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user {{ CONTAINER }} fish -C "cd $p"
-
-# Enter the devcontainer with a shell (using devcontainer CLI).
-[group('access')]
-devcontainer-enter:
-    devcontainer exec fish
+cd PROJECT_NAME=".":
+    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user -w "/workspaces/$p" {{ CONTAINER }} fish
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Agent sessions

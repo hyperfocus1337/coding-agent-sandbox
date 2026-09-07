@@ -29,7 +29,7 @@ Prerequisites: Docker (Docker Desktop or OrbStack) and [`just`](https://github.c
 4. **Get a shell inside**, then run an agent in one of your project directories:
 
    ```bash
-   just docker-enter          # fish shell in the container
+   just cd                    # fish shell in the container, in /workspaces
    just claude my-project     # cd into my-project and start Claude Code
    ```
 
@@ -45,9 +45,8 @@ Run `just` with no arguments to list every recipe. The common ones:
 | `just stop` / `just rm`        | Stop / remove the container                                      |
 | `just restart`                 | Bring the container back on the current compose config           |
 | `just recreate`                | Delete the container and start a fresh one                       |
-| `just docker-enter`            | Open a fish shell in the running container                       |
 | `just projects`                | List the mounted projects (the dirs under /workspaces)           |
-| `just cd my-project`           | Open a shell already `cd`'d into a project directory             |
+| `just cd my-project`           | Open a fish shell in a project directory (bare: /workspaces)     |
 | `just claude my-project`       | Start Claude Code inside a project directory                     |
 | `just sessions`                | List the Claude sessions running in the container                |
 | `just resume my-project`       | Continue that project's most recent Claude session               |
