@@ -7,6 +7,7 @@
 CONTAINER := "coding-agent-sandbox-devcontainer"
 
 # Both compose files, in override-last order. Used by Container lifecycle and Watchtower.
+# The override is also read and written by scripts/projects/lib.sh, which has the path.
 COMPOSE_FILES := "-f .devcontainer/docker-compose.yml -f .devcontainer/docker-compose.override.yml"
 
 # Five-layer image chain: base -> node -> tooling -> python -> agent.
@@ -182,6 +183,11 @@ fix-volume-permissions:
 install-extensions:
     docker exec -it -u user {{ CONTAINER }} bash -lc "cd ~/repositories/coding-agent-config && ./extensions/install.sh"
 
+# The three recipes below edit the project bind mounts in the compose override. The
+# logic lives in scripts/projects/, whose lib.sh owns the override path and the mount
+# line format. All three are prefixed with `@`: `cas` calls them and shows what they
+# print, so the echoed command line would be noise in its output.
+
 # PROJECT is a path under ~/Repositories (`agents/my-project`) or any absolute
 # path; its last segment becomes the /workspaces target. Exits 3 when that mount
 # is already there. See docs/guides/mounting-projects.md.
@@ -191,28 +197,33 @@ install-extensions:
 [group('setup')]
 [no-exit-message]
 add-project PROJECT CONSISTENCY="delegated":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    override=".devcontainer/docker-compose.override.yml"
-    # A relative path is a repo under ~/Repositories; an absolute one is taken as
-    # given, so ~/.local/share/chezmoi mounts from where it lives.
-    project="{{ PROJECT }}"
-    project="${project/#\~/$HOME}"
-    [[ "$project" == /* ]] || project="$HOME/Repositories/$project"
-    # Compose expands ${HOME} at up time, so anything inside the home dir goes in
-    # that form and the override stays portable to a machine with a different home.
-    src="$project"
-    if [[ "$project" == "$HOME"/* ]]; then
-        src="\${HOME}${project#"$HOME"}"
-    fi
-    line="      - ${src}:/workspaces/$(basename "$project"):{{ CONSISTENCY }}"
-    if grep -qF "$line" "$override"; then
-        echo "already mounted: $project"
-        exit 3
-    fi
-    printf '%s\n' "$line" >> "$override"
-    echo "mounted: $project"
-    echo "Run \`just up\` to apply it, which recreates the container and kills whatever runs inside."
+    @bash scripts/projects/add-project.sh "{{ PROJECT }}" "{{ CONSISTENCY }}"
+
+# PROJECT is a mounted project, named by its /workspaces directory the way `cas list`
+# shows it. Prints the host directory it is mounted from, so a caller can show what a
+# rename moves before it moves it. Exits 1 when nothing is mounted under that name.
+# no-exit-message: "not mounted" is an answer, not a failed recipe. Keep the
+# description below it, just takes the last comment line as its `--list` text.
+# Print the host directory a mounted project comes from.
+[group('setup')]
+[no-exit-message]
+project-source PROJECT:
+    @bash scripts/projects/project-source.sh "{{ PROJECT }}"
+
+# Renames in both places at once: the directory on the host, and the /workspaces name the
+# agents see. Renaming only one leaves the other pointing at a name that is gone, and
+# docker recreates a mount whose source is missing as an empty dir on the host.
+#
+# NEW is one directory name, not a path: the directory keeps its parent. Exits 2 on a bad
+# name, and 1 when OLD is not mounted, NEW already is, or the directories are not in the
+# state a rename needs. Applying it is the caller's job, with `just up`.
+# no-exit-message: those refusals are answers, not failed recipes. Keep the description
+# below it, just takes the last comment line as its `--list` text.
+# Rename a mounted project on the host and in /workspaces.
+[group('setup')]
+[no-exit-message]
+rename-project OLD NEW:
+    @bash scripts/projects/rename-project.sh "{{ OLD }}" "{{ NEW }}"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Image builds

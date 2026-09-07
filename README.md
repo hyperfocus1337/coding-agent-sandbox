@@ -71,6 +71,7 @@ The devcontainer is built from a layered stack of images (`base` → `node` → 
 | `config/config.fish`       | Fish shell configuration (mise activation, Starship prompt, direnv hook, PATH).                                                                                                                      |
 | `scripts/agents/config.sh` | Runs at build (`Dockerfile.agent`): clones the `coding-agent-config` repo and applies dotfiles via chezmoi. Extensions (plugins/skills/MCP) are installed at runtime with `just install-extensions`. |
 | `scripts/agents/gemini.sh` | Gemini CLI extensions (CLI is installed in `Dockerfile.node`; this script is commented out in `Dockerfile.agent`).                                                                                   |
+| `scripts/projects/`        | Bash behind the `add-project`, `project-source` and `rename-project` recipes: the scripts that read and write the project bind mounts in the compose override.                                       |
 | `Justfile`                 | Convenience commands for building the images and common container tasks.                                                                                                                             |
 
 ## Documentation

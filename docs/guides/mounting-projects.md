@@ -28,6 +28,30 @@ just add-project /Users/you/Repositories/agents/my-project
 
 A relative path is taken as a repo under `~/Repositories`; an absolute path is mounted from where it lives, so `just add-project ~/.local/share/chezmoi` works too. Paths inside your home directory are written back as `${HOME}/...`, which compose expands at `up` time, so the override stays portable.
 
+The path is resolved and checked before anything is written, so `.`, `..` and a trailing slash all settle to one form, and a directory that does not exist is refused with `no such directory`. Both matter, because neither is an error at `up` time: docker creates a missing bind source as an empty directory on the host. `~/Repositories` itself is refused too, since mounting the whole tree over `/workspaces` makes docker create one empty directory there per sibling mount.
+
+The recipe resolves a relative path against `~/Repositories`, not against your shell, so `just add-project .` names the tree and is refused. `cas add .` mounts the directory you are in: it resolves the path in your shell first, where the working directory is known.
+
+## Renaming a project
+
+Renaming a repo on the host without the mount leaves the mount pointing at a path that is gone, and docker recreates it as an empty directory. `rename-project` does both at once:
+
+```bash
+just rename-project my-project my-project-v2
+```
+
+`OLD` is the `/workspaces` name. `NEW` is one directory name, not a path: the directory keeps its parent, so `~/Repositories/agents/my-project` becomes `~/Repositories/agents/my-project-v2`. The mount line keeps its indent and its consistency flag. Apply it with `just up`, or use `cas rename`, which previews both paths, asks, and lists the Claude sessions the restart would kill.
+
+It refuses to act when `OLD` is not mounted, when `NEW` is already mounted, when the source is not a directory, or when the target name is taken on disk. Nothing is moved or rewritten in those cases.
+
+`project-source` answers the read-only half of the same question:
+
+```bash
+just project-source my-project
+```
+
+It prints the host directory the mount comes from, with `${HOME}` expanded. The source is not always named after the project: `chezmoi` is mounted from `~/.local/share/chezmoi`, so renaming that project moves chezmoi's own source directory.
+
 ## Consistency flag
 
 `:delegated` is the default. Override it with a second argument when a project needs stricter host/container consistency:
@@ -40,4 +64,8 @@ Modes: `consistent` (default docker behavior, slow), `cached` (host authoritativ
 
 ## Dedup
 
-Re-running `add-project` for a path that is already mounted with the same consistency flag prints `already mounted: <project>`, skips the append and exits 3, which is how `cas add` knows there is nothing to apply. The check keys on the full line, so re-adding the same project with a different consistency flag will append a second entry (change the existing line by hand if that is not what you want).
+Re-running `add-project` for a path that is already mounted with the same consistency flag prints `already mounted: <project>`, skips the append and exits 3, which is how `cas add` knows there is nothing to apply. The check keys on the full line, so re-adding the same project with a different consistency flag will append a second entry (change the existing line by hand if that is not what you want). `rename-project` refuses a project in that state, since it cannot tell which of the two lines to rewrite.
+
+## Where the logic lives
+
+The three recipes are one line each in the [`Justfile`](../../Justfile). They run the scripts in [`scripts/projects/`](../../scripts/projects), which are also runnable on their own. `lib.sh` there holds the override path and the mount line format, so a change to the line shape is one edit that all three scripts follow.
