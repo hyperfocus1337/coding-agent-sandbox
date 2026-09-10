@@ -180,5 +180,34 @@ for host in "${ssh_hosts[@]}"; do
     row "$host" "$hostname:$port" "$user" "$result"
 done
 
+# A commented-out Host block is one edit away from being live, so it is listed with the
+# key it names and whether that key is in the container. Nothing is probed. The block
+# ends at the first line that is not a comment or names the next Host.
+printf '\n#### Disabled hosts\n\n'
+mapfile -t disabled < <(
+    cat ~/.ssh/config ~/.ssh/config.d/* 2>/dev/null | awk '
+        function flush() { if (h != "") print h "|" hn "|" u "|" k "|" pt; h = "" }
+        /^[[:space:]]*#[[:space:]]*Host[[:space:]]/ { flush(); h = $3; hn = ""; u = ""; k = ""; pt = "22"; next }
+        !/^[[:space:]]*#/ { flush(); next }
+        h != "" && tolower($2) == "hostname" { hn = $3 }
+        h != "" && tolower($2) == "user" { u = $3 }
+        h != "" && tolower($2) == "identityfile" { k = $3 }
+        h != "" && tolower($2) == "port" { pt = $3 }
+        END { flush() }'
+)
+if [[ ${#disabled[@]} -eq 0 ]]; then
+    echo "None."
+else
+    echo "These blocks are commented out. Uncommenting one enables the access it describes."
+    echo
+    row "Host" "Target" "User" "Key" "Key in container"
+    row "---" "---" "---" "---" "---"
+    for line in "${disabled[@]}"; do
+        IFS='|' read -r host hostname user key port <<<"$line"
+        present="no"; [[ -n $key && -f ${key/#\~/$HOME} ]] && present="yes"
+        row "$host" "$hostname:$port" "$user" "$key" "$present"
+    done
+fi
+
 exec >&-
 wait "$prettier_pid"
