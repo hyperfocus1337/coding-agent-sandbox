@@ -23,6 +23,57 @@ h1() { printf '\n## %s\n\n' "$1"; }
 h2() { printf '\n### %s\n\n' "$1"; }
 row() { local cells; printf -v cells ' | %s' "$@"; printf '%s |\n' "${cells# }"; }
 
+# ----- SSH probe -----
+# Runs before anything prints: the git servers go under Source control, the rest under
+# SSH targets, and the probe result says which is which.
+#
+# Every non-wildcard Host in ~/.ssh/config and its Include files. BatchMode stops any
+# prompt; -n and no command make git servers print their greeting and shells exit at once.
+#
+# ssh -G reports the container user name both for a host without a User line and for one
+# that names it. The first are the git servers, where that name is meaningless, so such a
+# host is tried as git first and as the configured user when git is rejected.
+probe() {
+    local out rc
+    out="$(timeout 20 ssh -n -T -o BatchMode=yes -o ConnectTimeout=5 \
+        -o StrictHostKeyChecking=accept-new "$1@$2" 2>&1 | tr -d '\r')"
+    rc=${PIPESTATUS[0]}
+    case "$out" in
+        *"Welcome to GitLab, @"*) result="git access as ${out#*@}"; result="${result%%!*}" ;;
+        *"successfully authenticated"*) result="git access as ${out#Hi }"; result="${result%%!*}" ;;
+        *"Permission denied"*) result="reachable, key rejected" ;;
+        *"Could not resolve"*) result="unreachable, name does not resolve" ;;
+        *"timed out"*|*"Connection refused"*|*"No route to host"*) result="unreachable, ${out##*: }" ;;
+        *) [[ $rc -eq 0 ]] && result="shell access" || result="failed (rc=$rc)" ;;
+    esac
+}
+git_rows=(); shell_rows=()
+mapfile -t ssh_hosts < <(
+    cat ~/.ssh/config ~/.ssh/config.d/* 2>/dev/null \
+        | awk '$1=="Host" {for (i=2;i<=NF;i++) if ($i !~ /[*?!]/) print $i}' | sort -u
+)
+me="$(id -un)"
+for host in "${ssh_hosts[@]}"; do
+    hostname="$(ssh -G "$host" 2>/dev/null | awk '$1=="hostname"{print $2}')"
+    port="$(ssh -G "$host" 2>/dev/null | awk '$1=="port"{print $2}')"
+    user="$(ssh -G "$host" 2>/dev/null | awk '$1=="user"{print $2}')"
+    if [[ $user == "$me" ]]; then
+        probe git "$host"
+        if [[ $result == "reachable, key rejected" ]]; then probe "$user" "$host"; else user=git; fi
+    else
+        probe "$user" "$host"
+    fi
+    line="$host|$hostname:$port|$user|$result"
+    if [[ $result == "git access"* || $user == git ]]; then git_rows+=("$line"); else shell_rows+=("$line"); fi
+done
+
+ssh_table() {
+    row "Host" "Target" "User" "Result"
+    row "---" "---" "---" "---"
+    for line in "$@"; do IFS='|' read -r host target user result <<<"$line"; row "$host" "$target" "$user" "$result"; done
+}
+
+
 printf '# Container access overview\n\n'
 printf 'Generated %s on %s as %s.\n' "$(date -Is)" "$(hostname)" "$(id -un)"
 
@@ -59,6 +110,10 @@ if gh auth status >/dev/null 2>&1; then
 else
     echo "Not logged in."
 fi
+
+# ----- Git over SSH -----
+h2 "Git over SSH"
+if [[ ${#git_rows[@]} -eq 0 ]]; then echo "None."; else ssh_table "${git_rows[@]}"; fi
 
 # ===== Cloud platforms =====
 h1 "Cloud platforms"
@@ -138,47 +193,10 @@ else
     done
 fi
 
-# ----- SSH -----
-# Every non-wildcard Host in ~/.ssh/config and its Include files. BatchMode stops any
-# prompt; -n and no command make git servers print their greeting and shells exit at once.
-#
-# ssh -G reports the container user name both for a host without a User line and for one
-# that names it. The first are the git servers, where that name is meaningless, so such a
-# host is tried as git first and as the configured user when git is rejected.
-probe() {
-    local out rc
-    out="$(timeout 20 ssh -n -T -o BatchMode=yes -o ConnectTimeout=5 \
-        -o StrictHostKeyChecking=accept-new "$1@$2" 2>&1 | tr -d '\r')"
-    rc=${PIPESTATUS[0]}
-    case "$out" in
-        *"Welcome to GitLab, @"*) result="git access as ${out#*@}"; result="${result%%!*}" ;;
-        *"successfully authenticated"*) result="git access as ${out#Hi }"; result="${result%%!*}" ;;
-        *"Permission denied"*) result="reachable, key rejected" ;;
-        *"Could not resolve"*) result="unreachable, name does not resolve" ;;
-        *"timed out"*|*"Connection refused"*|*"No route to host"*) result="unreachable, ${out##*: }" ;;
-        *) [[ $rc -eq 0 ]] && result="shell access" || result="failed (rc=$rc)" ;;
-    esac
-}
+# ===== SSH targets =====
 h1 "SSH targets"
-row "Host" "Target" "User" "Result"
-row "---" "---" "---" "---"
-mapfile -t ssh_hosts < <(
-    cat ~/.ssh/config ~/.ssh/config.d/* 2>/dev/null \
-        | awk '$1=="Host" {for (i=2;i<=NF;i++) if ($i !~ /[*?!]/) print $i}' | sort -u
-)
-me="$(id -un)"
-for host in "${ssh_hosts[@]}"; do
-    hostname="$(ssh -G "$host" 2>/dev/null | awk '$1=="hostname"{print $2}')"
-    port="$(ssh -G "$host" 2>/dev/null | awk '$1=="port"{print $2}')"
-    user="$(ssh -G "$host" 2>/dev/null | awk '$1=="user"{print $2}')"
-    if [[ $user == "$me" ]]; then
-        probe git "$host"
-        if [[ $result == "reachable, key rejected" ]]; then probe "$user" "$host"; else user=git; fi
-    else
-        probe "$user" "$host"
-    fi
-    row "$host" "$hostname:$port" "$user" "$result"
-done
+printf '#### Enabled hosts\n\n'
+if [[ ${#shell_rows[@]} -eq 0 ]]; then echo "None."; else ssh_table "${shell_rows[@]}"; fi
 
 # A commented-out Host block is one edit away from being live, so it is listed with the
 # key it names and whether that key is in the container. Nothing is probed. The block
