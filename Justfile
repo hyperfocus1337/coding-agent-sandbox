@@ -104,6 +104,14 @@ up-dev:
 cd PROJECT_NAME=".":
     @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user -w "/workspaces/$p" {{ CONTAINER }} fish
 
+# The script is passed as the bash -c argument, so it needs no mount of this repo inside
+# the container and keeps stdin free for the tools it runs. The report names accounts
+# and hosts, so it lands in docs/host/, which is gitignored.
+# Write a Markdown overview of the access glab, gh, aws, az, oci and SSH have in the container.
+[group('access')]
+access-overview:
+    @mkdir -p docs/host && docker exec -u user {{ CONTAINER }} bash -c "$(cat scripts/container/access-overview.sh)" > docs/host/access-overview.md && echo "wrote docs/host/access-overview.md"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Agent sessions
 # ──────────────────────────────────────────────────────────────────────────────
