@@ -61,6 +61,23 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g @biomejs/biome
 
+# ----- dead-code and unused-dependency finders -----
+
+# Knip: finds unused files, exports and dependencies in JS/TS projects
+# https://knip.dev/overview/getting-started
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g knip
+
+# depcheck: finds unused and missing dependencies in package.json
+# https://github.com/depcheck/depcheck
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g depcheck
+
+# ts-prune: finds unused TypeScript exports from tsconfig.json (requires Node >= 22.18)
+# https://github.com/nadeesha/ts-prune
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g ts-prune
+
 # Mermaid CLI (mmdc): render .mmd diagrams to SVG/PNG/PDF via a headless browser (puppeteer).
 # PUPPETEER_SKIP_DOWNLOAD stops puppeteer's postinstall from fetching its own Chromium (which
 # grabbed an arch-wrong amd64 build on arm64 and failed to launch); instead we point it at the
