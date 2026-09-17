@@ -2,7 +2,7 @@
 # Top layer: script/curl-based AI agent installers + agent config, on top of the
 # python devcontainer image (which now also carries the Playwright browser stack).
 # This is the image the devcontainer runs. The npm-based agent CLIs (sandbox-runtime,
-# Codex, Gemini, OpenCode, Duo) live in Dockerfile.node; only installers that are not
+# Codex, Gemini, OpenCode, Duo, Pi) live in Dockerfile.node; only installers that are not
 # npm packages live here, so an agent-CLI bump that only touches this layer does not
 # rebuild the layers below.
 

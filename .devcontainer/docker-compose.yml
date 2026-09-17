@@ -40,6 +40,9 @@ services:
       - coding-agent-sandbox-ssh-config:/home/user/.ssh
       - coding-agent-sandbox-gemini-config:/home/user/.gemini
       - coding-agent-sandbox-codex-config:/home/user/.codex
+      - coding-agent-sandbox-pi-config:/home/user/.pi
+      # ~/.agents/skills is the cross-agent skills dir pi reads, not pi's own config.
+      - coding-agent-sandbox-agents-config:/home/user/.agents
       - coding-agent-sandbox-ccstatusline-config:/home/user/.config/ccstatusline
       # Additional workspace bind mounts (local repo paths) live in
       # docker-compose.override.yml — gitignored and merged at runtime.
@@ -90,6 +93,10 @@ volumes:
   coding-agent-sandbox-gemini-config:
     external: true
   coding-agent-sandbox-codex-config:
+    external: true
+  coding-agent-sandbox-pi-config:
+    external: true
+  coding-agent-sandbox-agents-config:
     external: true
   coding-agent-sandbox-ccstatusline-config:
     external: true

@@ -132,6 +132,12 @@ RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GI
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
     npm install -g @gitlab/duo-cli
 
+# Pi coding agent
+# https://pi.dev/docs/latest
+# --ignore-scripts is the vendor-documented flag; the package has no postinstall step.
+RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
+    npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
 # Chrome DevTools MCP server/CLI
 # https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/main/docs/cli.md
 RUN --mount=type=cache,target=/home/$USERNAME/.npm,uid=${USER_UID},gid=${USER_GID} \
