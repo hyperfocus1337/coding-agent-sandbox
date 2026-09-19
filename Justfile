@@ -174,6 +174,27 @@ codex PROJECT_NAME *ARGS:
 codex-resume PROJECT_NAME:
     @just codex {{ PROJECT_NAME }} resume --last
 
+# --- Pi ---
+
+# Same shape as `claude` above. Pi runs its tools without an approval prompt; the one
+# thing it asks about is the project-local .pi/ files (extensions, skills), and --approve
+# trusts them, since the container is the sandbox. Pi keeps its sessions in ~/.pi, a
+# named volume, so they survive a stop.
+# Step into a project directory and run Pi there (e.g. `just pi my-project`).
+[group('sessions')]
+[no-exit-message]
+pi PROJECT_NAME *ARGS:
+    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd $p; pi --approve {{ ARGS }}"
+
+# Pi stores sessions per cwd, so --continue from the project dir is that project's
+# most recent session. Pi reports it itself when there is none. Like Codex, Pi has no
+# session index to read ids from here; `just pi <project> --resume` opens its own picker.
+# Continue a project's most recent Pi session (e.g. `just pi-resume my-project`).
+[group('sessions')]
+[no-exit-message]
+pi-resume PROJECT_NAME:
+    @just pi {{ PROJECT_NAME }} --continue
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Setup (fresh machine, after a rebuild)
 # ──────────────────────────────────────────────────────────────────────────────
