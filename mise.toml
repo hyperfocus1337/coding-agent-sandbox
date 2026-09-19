@@ -5,7 +5,7 @@
 # from here:
 #   Dockerfile.base       -> yq, starship
 #   Dockerfile.node       -> node, pnpm, yarn
-#   Dockerfile.tooling    -> glab, just, terraform, kubectl, k3s, git-delta (aqua:dandavison/delta), just-lsp, gitleaks, betterleaks
+#   Dockerfile.tooling    -> glab, just, terraform, kubectl, k3s, git-delta (aqua:dandavison/delta), just-lsp, shfmt, gitleaks, betterleaks
 #   Dockerfile.python     -> python, uv (also installs Chromium via `uv run`, @playwright/cli via npm; not mise)
 #   Dockerfile.agent      -> (none; script/curl-based AI installers)
 #
@@ -36,6 +36,10 @@ kubectl = "1.36.4"
 k3s = "1.36.3+k3s1"
 "aqua:dandavison/delta" = "0.19.2"
 "github:terror/just-lsp" = "0.6.2"
+
+# Shell formatter (Dockerfile.tooling). apt trixie caps at 3.8.0; this is the
+# upstream release binary.
+shfmt = "3.14.1"
 
 # Secret scanners (Dockerfile.tooling)
 gitleaks = "8.30.1"
