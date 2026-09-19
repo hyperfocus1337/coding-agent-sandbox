@@ -176,6 +176,12 @@ codex-resume PROJECT_NAME:
 
 # --- Pi ---
 
+# Pi has no notification of its own, but ships one as an example extension: it writes
+# an OSC 777 sequence when a run settles, which cmux renders. Extensions are opt-in, so
+# --extension loads it. The path is fixed by the NPM_CONFIG_PREFIX set in Dockerfile.base
+# and by the npm package name in Dockerfile.node. See docs/guides/cmux-notifications.md.
+PI_NOTIFY_EXTENSION := "/usr/local/share/npm-global/lib/node_modules/@earendil-works/pi-coding-agent/examples/extensions/notify.ts"
+
 # Same shape as `claude` above. Pi runs its tools without an approval prompt; the one
 # thing it asks about is the project-local .pi/ files (extensions, skills), and --approve
 # trusts them, since the container is the sandbox. Pi keeps its sessions in ~/.pi, a
@@ -184,7 +190,7 @@ codex-resume PROJECT_NAME:
 [group('sessions')]
 [no-exit-message]
 pi PROJECT_NAME *ARGS:
-    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd $p; pi --approve {{ ARGS }}"
+    @p="$(just resolve-project '{{ PROJECT_NAME }}')" && docker exec -it -u user -e TERM_PROGRAM {{ CONTAINER }} fish -C "cd $p; pi --approve --extension {{ PI_NOTIFY_EXTENSION }} {{ ARGS }}"
 
 # Pi stores sessions per cwd, so --continue from the project dir is that project's
 # most recent session. Pi reports it itself when there is none. Like Codex, Pi has no
