@@ -19,6 +19,7 @@ Run `claude` on the target machine and complete the auth flow before copying any
 ### 2. Identify the project folder to migrate
 
 On the source machine:
+
 ```bash
 ls ~/.claude/projects/
 ```
@@ -67,10 +68,10 @@ docker exec -it -u root coding-agent-sandbox-devcontainer rm -rf /home/user/.cla
 
 ## What to copy and what not to
 
-| File/folder                   | Copy?         | Notes                                  |
-| ----------------------------- | ------------- | -------------------------------------- |
-| `~/.claude/projects/<name>/`  | ✅            | Rename to match target path            |
-| `~/.claude/settings.json`     | ✅            | Global preferences                     |
-| `~/.claude/CLAUDE.md`         | ✅            | Global instructions                    |
-| `~/.claude/history.jsonl`     | ⚠️ Optional   | Prompt input recall (up arrow history) |
-| `~/.claude/.credentials.json` | ❌            | Re-authenticate instead                |
+| File/folder                   | Copy?       | Notes                                  |
+| ----------------------------- | ----------- | -------------------------------------- |
+| `~/.claude/projects/<name>/`  | ✅          | Rename to match target path            |
+| `~/.claude/settings.json`     | ✅          | Global preferences                     |
+| `~/.claude/CLAUDE.md`         | ✅          | Global instructions                    |
+| `~/.claude/history.jsonl`     | ⚠️ Optional | Prompt input recall (up arrow history) |
+| `~/.claude/.credentials.json` | ❌          | Re-authenticate instead                |
