@@ -20,6 +20,10 @@ services:
       # agent cannot read the plaintext; entrypoint.sh applies it to node as root at
       # startup. Create it first: printf '%s\n' 'your-dev-secret' > config/.sudo-password
       - ../config/.sudo-password:/root/.sudo-password:ro
+      # Pasted screenshots (macOS). The terminal saves a pasted image in the per-user
+      # temp dir and pastes its host path, so mount that dir at the same path.
+      # ${TMPDIR} follows the dir if it moves; compose fails if TMPDIR is unset.
+      - ${TMPDIR:?TMPDIR is unset}:${TMPDIR}:ro
 
       # Sibling repos to edit from inside the container.
       - ${HOME}/Repositories/your-org/repo-a:/workspaces/repo-a:delegated
