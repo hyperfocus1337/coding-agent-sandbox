@@ -5,7 +5,7 @@
 # from here:
 #   Dockerfile.base       -> yq, starship
 #   Dockerfile.node       -> node, pnpm, yarn
-#   Dockerfile.tooling    -> glab, just, terraform, kubectl, k3s, git-delta (aqua:dandavison/delta), just-lsp, shfmt, gitleaks, betterleaks
+#   Dockerfile.tooling    -> glab, just, terraform, kubectl, k3s, git-delta (aqua:dandavison/delta), just-lsp, shfmt, gitleaks, betterleaks, vale
 #   Dockerfile.python     -> python, uv (also installs Chromium via `uv run`, @playwright/cli via npm; not mise)
 #   Dockerfile.agent      -> (none; script/curl-based AI installers)
 #
@@ -44,3 +44,7 @@ shfmt = "3.14.1"
 # Secret scanners (Dockerfile.tooling)
 gitleaks = "8.30.1"
 betterleaks = "1.8.1"
+
+# Prose linter for the markdown paragraph check of the lint-all-languages
+# Claude Code hook (Dockerfile.tooling)
+vale = "3.23.0"
