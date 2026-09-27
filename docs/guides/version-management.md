@@ -36,7 +36,10 @@ Most tools resolve by short name through mise's built-in [registry](https://mise
 
 **Pin or change a version.** Edit the tool's line in `mise.toml` and rebuild. That file is the single source of truth (the role `versions.lock` used to play).
 
-**See newer versions.** In a running container, `mise outdated` shows what is available. Update `mise.toml` to match, then rebuild.
+**See newer versions.** Run `just outdated`, which runs `mise outdated --bump --local`.
+It lists every pin in `mise.toml` that has a newer release, also across a major version.
+Run `just bump` to rewrite those pins in `mise.toml`, or edit them by hand, then rebuild.
+`just bump` runs only inside the devcontainer, because it installs each new version where it runs.
 
 **Add a new tool.** Add a `<tool> = "<version>"` line to `mise.toml`, then add the tool name to the `mise install …` call in the appropriate layer (base for prompt/data tools, node for Node runtimes, tooling for dev binaries, python for Python tooling). If the short name is not in the registry, use an explicit backend as the key (`"aqua:owner/repo"`, `"ubi:owner/repo"`, `github:`, `gitlab:`).
 

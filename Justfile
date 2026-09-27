@@ -28,7 +28,7 @@ IMAGE_AGENT := "ghcr.io/hyperfocus1337/coding-agent-sandbox/devcontainer-agent"
 
 # --unsorted keeps recipes in source order, which is why the sections below run
 # daily use first (lifecycle, access, sessions) and one-off or rare work last
-# (setup, builds, registry, maintenance, watchtower).
+# (setup, builds, mise, registry, maintenance, watchtower).
 # List all available recipes (default when running `just` with no arguments).
 default:
     @just --list --unsorted
@@ -372,6 +372,30 @@ build-agent:
         --tag "{{ IMAGE_AGENT }}:latest" \
         --file Dockerfile.agent \
         .
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Mise (tool versions in mise.toml)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# --bump compares against the newest release, not only the range in the pin, so
+# `node = "26"` also reports 27. --local skips the tools in your global mise config.
+# Pins of `latest` never show. This only lists; edit mise.toml yourself, then rebuild.
+# List the mise.toml pins that have a newer release.
+[group('mise')]
+outdated:
+    mise outdated --bump --local
+
+# `mise upgrade --bump` installs each new version before it rewrites the pin, and
+# keeps the pin's precision (`26` becomes `27`). It refuses to run outside the
+# devcontainer (DEVCONTAINER, set in Dockerfile.base), so those installs never land
+# on the host, and k3s, which ships Linux binaries only, always has a platform.
+# ARGS go to mise, e.g. `just bump --dry-run` or `just bump pnpm yarn`.
+# Bump the mise.toml pins to their newest release, in the devcontainer (rebuild afterwards).
+[group('mise')]
+[no-exit-message]
+bump *ARGS:
+    @[ "${DEVCONTAINER:-}" = true ] || { echo "error: run \`just bump\` inside the devcontainer, from this repo under /workspaces" >&2; exit 1; }
+    mise upgrade --bump --local {{ ARGS }}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Registry
