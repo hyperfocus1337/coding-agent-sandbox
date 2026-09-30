@@ -33,6 +33,11 @@ RUN curl -fsSL https://herdr.dev/install.sh | sh && \
 # https://microsoft.github.io/apm/
 RUN curl -sSL https://aka.ms/apm-unix | APM_INSTALL_DIR="$HOME/.local/bin" sh
 
+# Install Oh My Pi (omp) prebuilt binary to ~/.local/bin. --binary skips the
+# bun-based source install the script picks when bun is on PATH.
+# https://github.com/can1357/oh-my-pi
+RUN curl -fsSL https://omp.sh/install | sh -s -- --binary
+
 # Personal Git identity is NOT baked in. It is injected at runtime via a
 # docker-compose.override.yml bind mount (config/.gitconfig → ~/.gitconfig); see the .example.
 
