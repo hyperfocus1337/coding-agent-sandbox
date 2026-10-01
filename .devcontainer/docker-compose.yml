@@ -31,6 +31,9 @@ services:
       # forwardPorts in devcontainer.json, which remaps a busy host port.
       - "53692:53692" # pi: Anthropic (Claude Pro/Max)
       - "1455:1455" # pi: OpenAI Codex
+      # glab OAuth callback (`glab auth login`, Web). glab listens on :7171, all
+      # interfaces, so no bind override is needed.
+      - "7171:7171"
     labels:
       # Opt this container in to Watchtower auto-updates.
       - "com.centurylinklabs.watchtower.enable=true"

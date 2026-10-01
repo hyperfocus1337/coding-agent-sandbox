@@ -114,6 +114,11 @@ RUN usermod -aG sudo "$USERNAME"
 # root-only mount if present, then drops to user to run the compose command.
 COPY --chmod=0755 scripts/container/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+# No browser runs in the container. xdg-open, glab, gh and Python's webbrowser all call
+# $BROWSER, which prints the URL as a link the host terminal opens on Cmd+click.
+COPY --chmod=0755 scripts/container/browser.sh /usr/local/bin/browser
+ENV BROWSER="/usr/local/bin/browser"
+
 # Drop to non-root user for runtime
 USER $USERNAME
 
